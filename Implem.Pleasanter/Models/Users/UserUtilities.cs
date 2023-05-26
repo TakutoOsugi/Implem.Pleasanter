@@ -2352,6 +2352,12 @@ namespace Implem.Pleasanter.Models
                                     value: userModel.SecondaryAuthenticationCodeExpirationTime.ToResponse(context: context, ss: ss, column: column),
                                     options: column.ResponseValOptions(serverScriptModelColumn: serverScriptModelColumn));
                                 break;
+                            case "SecretKey":
+                                res.Val(
+                                    target: "#Users_SecretKey" + idSuffix,
+                                    value: userModel.SecretKey.ToResponse(context: context, ss: ss, column: column),
+                                    options: column.ResponseValOptions(serverScriptModelColumn: serverScriptModelColumn));
+                                break;
                             case "LdapSearchRoot":
                                 res.Val(
                                     target: "#Users_LdapSearchRoot" + idSuffix,

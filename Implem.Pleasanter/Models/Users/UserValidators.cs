@@ -311,6 +311,12 @@ namespace Implem.Pleasanter.Models
                             return new ErrorData(type: Error.Types.HasNotPermission);
                         }
                         break;
+                    case "SecretKey":
+                        if (userModel.SecretKey_Updated(context: context, column: column))
+                        {
+                            return new ErrorData(type: Error.Types.HasNotPermission);
+                        }
+                        break;
                     case "LdapSearchRoot":
                         if (userModel.LdapSearchRoot_Updated(context: context, column: column))
                         {
@@ -658,6 +664,12 @@ namespace Implem.Pleasanter.Models
                         break;
                     case "SecondaryAuthenticationCodeExpirationTime":
                         if (userModel.SecondaryAuthenticationCodeExpirationTime_Updated(context: context))
+                        {
+                            return new ErrorData(type: Error.Types.HasNotPermission);
+                        }
+                        break;
+                    case "SecretKey":
+                        if (userModel.SecretKey_Updated(context: context))
                         {
                             return new ErrorData(type: Error.Types.HasNotPermission);
                         }

@@ -46,6 +46,7 @@ namespace Implem.Pleasanter.Models
         public string PasswordHistries { get; set; }
         public string SecondaryAuthenticationCode { get; set; }
         public DateTime? SecondaryAuthenticationCodeExpirationTime { get; set; }
+        public string SecretKey { get; set; }
         public string LdapSearchRoot { get; set; }
         public DateTime? SynchronizedTime { get; set; }
         public string Comments { get; set; }
@@ -103,6 +104,7 @@ namespace Implem.Pleasanter.Models
                 case "PasswordHistries": return PasswordHistries;
                 case "SecondaryAuthenticationCode": return SecondaryAuthenticationCode;
                 case "SecondaryAuthenticationCodeExpirationTime": return SecondaryAuthenticationCodeExpirationTime;
+                case "SecretKey": return SecretKey;
                 case "LdapSearchRoot": return LdapSearchRoot;
                 case "SynchronizedTime": return SynchronizedTime;
                 case "Comments": return Comments;

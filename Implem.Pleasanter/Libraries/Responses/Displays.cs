@@ -12839,6 +12839,16 @@ namespace Implem.Pleasanter.Libraries.Responses
                 data: data);
         }
 
+        public static string Users_SecretKey(
+            Context context,
+            params string[] data)
+        {
+            return Get(
+                context: context,
+                id: "Users_SecretKey",
+                data: data);
+        }
+
         public static string Users_ServiceManager(
             Context context,
             params string[] data)

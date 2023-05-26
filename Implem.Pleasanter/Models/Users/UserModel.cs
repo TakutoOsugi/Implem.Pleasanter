@@ -77,6 +77,7 @@ namespace Implem.Pleasanter.Models
         public string SessionGuid = string.Empty;
         public string SecondaryAuthenticationCode = string.Empty;
         public Time SecondaryAuthenticationCodeExpirationTime = new Time();
+        public string SecretKey = string.Empty;
         public string LdapSearchRoot = string.Empty;
         public DateTime SynchronizedTime = 0.ToDateTime();
 
@@ -155,6 +156,7 @@ namespace Implem.Pleasanter.Models
         public string SavedSessionGuid = string.Empty;
         public string SavedSecondaryAuthenticationCode = string.Empty;
         public DateTime SavedSecondaryAuthenticationCodeExpirationTime = 0.ToDateTime();
+        public string SavedSecretKey = string.Empty;
         public string SavedLdapSearchRoot = string.Empty;
         public DateTime SavedSynchronizedTime = 0.ToDateTime();
 
@@ -428,6 +430,14 @@ namespace Implem.Pleasanter.Models
                 (column == null ||
                 column.DefaultInput.IsNullOrEmpty() ||
                 column.GetDefaultInput(context: context).ToString() != SecondaryAuthenticationCode);
+        }
+
+        public bool SecretKey_Updated(Context context, Column column = null)
+        {
+            return SecretKey != SavedSecretKey && SecretKey != null &&
+                (column == null ||
+                column.DefaultInput.IsNullOrEmpty() ||
+                column.GetDefaultInput(context: context).ToString() != SecretKey);
         }
 
         public bool LdapSearchRoot_Updated(Context context, Column column = null)
@@ -1033,6 +1043,18 @@ namespace Implem.Pleasanter.Models
                                 exportColumn: exportColumn)
                             : string.Empty;
                     break;
+                case "SecretKey":
+                    value = ss.ReadColumnAccessControls.Allowed(
+                        context: context,
+                        ss: ss,
+                        column: column,
+                        mine: mine)
+                            ? SecretKey.ToExport(
+                                context: context,
+                                column: column,
+                                exportColumn: exportColumn)
+                            : string.Empty;
+                    break;
                 case "LdapSearchRoot":
                     value = ss.ReadColumnAccessControls.Allowed(
                         context: context,
@@ -1398,6 +1420,7 @@ namespace Implem.Pleasanter.Models
                     case "PasswordHistries": data.PasswordHistries = PasswordHistries.ToJson(); break;
                     case "SecondaryAuthenticationCode": data.SecondaryAuthenticationCode = SecondaryAuthenticationCode; break;
                     case "SecondaryAuthenticationCodeExpirationTime": data.SecondaryAuthenticationCodeExpirationTime = SecondaryAuthenticationCodeExpirationTime.Value.ToLocal(context: context); break;
+                    case "SecretKey": data.SecretKey = SecretKey; break;
                     case "LdapSearchRoot": data.LdapSearchRoot = LdapSearchRoot; break;
                     case "SynchronizedTime": data.SynchronizedTime = SynchronizedTime.ToLocal(context: context); break;
                     case "Creator": data.Creator = Creator.Id; break;
@@ -1655,6 +1678,11 @@ namespace Implem.Pleasanter.Models
                         column: column);
                 case "SecondaryAuthenticationCodeExpirationTime":
                     return SecondaryAuthenticationCodeExpirationTime.ToDisplay(
+                        context: context,
+                        ss: ss,
+                        column: column);
+                case "SecretKey":
+                    return SecretKey.ToDisplay(
                         context: context,
                         ss: ss,
                         column: column);
@@ -2014,6 +2042,11 @@ namespace Implem.Pleasanter.Models
                         context: context,
                         ss: ss,
                         column: column);
+                case "SecretKey":
+                    return SecretKey.ToApiDisplayValue(
+                        context: context,
+                        ss: ss,
+                        column: column);
                 case "LdapSearchRoot":
                     return LdapSearchRoot.ToApiDisplayValue(
                         context: context,
@@ -2367,6 +2400,11 @@ namespace Implem.Pleasanter.Models
                         column: column);
                 case "SecondaryAuthenticationCodeExpirationTime":
                     return SecondaryAuthenticationCodeExpirationTime.ToApiValue(
+                        context: context,
+                        ss: ss,
+                        column: column);
+                case "SecretKey":
+                    return SecretKey.ToApiValue(
                         context: context,
                         ss: ss,
                         column: column);
@@ -2818,6 +2856,7 @@ namespace Implem.Pleasanter.Models
                     case "Users_SessionGuid": SessionGuid = value.ToString(); break;
                     case "Users_SecondaryAuthenticationCode": SecondaryAuthenticationCode = value.ToString().Sha512Cng(); break;
                     case "Users_SecondaryAuthenticationCodeExpirationTime": SecondaryAuthenticationCodeExpirationTime = new Time(context, value.ToDateTime(), byForm: true); break;
+                    case "Users_SecretKey": SecretKey = value.ToString().Sha512Cng(); break;
                     case "Users_LdapSearchRoot": LdapSearchRoot = value.ToString(); break;
                     case "Users_SynchronizedTime": SynchronizedTime = value.ToDateTime().ToUniversal(context: context); break;
                     case "Users_Timestamp": Timestamp = value.ToString(); break;
@@ -2946,6 +2985,7 @@ namespace Implem.Pleasanter.Models
             SessionGuid = userModel.SessionGuid;
             SecondaryAuthenticationCode = userModel.SecondaryAuthenticationCode;
             SecondaryAuthenticationCodeExpirationTime = userModel.SecondaryAuthenticationCodeExpirationTime;
+            SecretKey = userModel.SecretKey;
             LdapSearchRoot = userModel.LdapSearchRoot;
             SynchronizedTime = userModel.SynchronizedTime;
             Comments = userModel.Comments;
@@ -3004,6 +3044,7 @@ namespace Implem.Pleasanter.Models
             if (data.LockoutCounter != null) LockoutCounter = data.LockoutCounter.ToInt().ToInt();
             if (data.SecondaryAuthenticationCode != null) SecondaryAuthenticationCode = data.SecondaryAuthenticationCode.ToString().ToString().Sha512Cng();
             if (data.SecondaryAuthenticationCodeExpirationTime != null) SecondaryAuthenticationCodeExpirationTime = new Time(context, data.SecondaryAuthenticationCodeExpirationTime.ToDateTime(), byForm: true);
+            if (data.SecretKey != null) SecretKey = data.SecretKey.ToString().ToString().Sha512Cng();
             if (data.LdapSearchRoot != null) LdapSearchRoot = data.LdapSearchRoot.ToString().ToString();
             if (data.SynchronizedTime != null) SynchronizedTime = data.SynchronizedTime.ToDateTime().ToDateTime().ToUniversal(context: context);
             if (data.Comments != null) Comments.Prepend(context: context, ss: ss, body: data.Comments);
@@ -3319,6 +3360,10 @@ namespace Implem.Pleasanter.Models
                             SecondaryAuthenticationCodeExpirationTime = new Time(context, dataRow, column.ColumnName);
                             SavedSecondaryAuthenticationCodeExpirationTime = SecondaryAuthenticationCodeExpirationTime.Value;
                             break;
+                        case "SecretKey":
+                            SecretKey = dataRow[column.ColumnName].ToString();
+                            SavedSecretKey = SecretKey;
+                            break;
                         case "LdapSearchRoot":
                             LdapSearchRoot = dataRow[column.ColumnName].ToString();
                             SavedLdapSearchRoot = LdapSearchRoot;
@@ -3455,6 +3500,7 @@ namespace Implem.Pleasanter.Models
                 || PasswordHistries_Updated(context: context)
                 || SecondaryAuthenticationCode_Updated(context: context)
                 || SecondaryAuthenticationCodeExpirationTime_Updated(context: context)
+                || SecretKey_Updated(context: context)
                 || LdapSearchRoot_Updated(context: context)
                 || SynchronizedTime_Updated(context: context)
                 || Comments_Updated(context: context)
