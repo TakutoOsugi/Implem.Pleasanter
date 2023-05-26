@@ -119,7 +119,8 @@
             "wwwroot/scripts/fieldselectable.js",
             "wwwroot/scripts/tenants.js",
             "wwwroot/scripts/responsive.js",
-            "wwwroot/scripts/qr.js"
+            "wwwroot/scripts/qr.js",
+            "wwwroot/scripts/authenticatebymail.js"
         ]
     }
 ]

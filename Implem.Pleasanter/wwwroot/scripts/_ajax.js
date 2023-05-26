@@ -43,6 +43,7 @@
 
         if (url.indexOf("authenticate") !== -1) {
             $p.showQr();
+            $p.authenticatebymail();
         }
     })
     .fail(function (jqXHR, textStatus, errorThrown) {

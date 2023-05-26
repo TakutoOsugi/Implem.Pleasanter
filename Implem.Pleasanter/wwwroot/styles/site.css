@@ -200,6 +200,11 @@ pre{
     clear:both;
 }
 
+#AuthenticationByMail {
+    float: left;
+    padding: 0px 0px 10px 50px;
+}
+
 #GoogleAuthenticatorQRCode {
     width: 38%;
     height: 160px;

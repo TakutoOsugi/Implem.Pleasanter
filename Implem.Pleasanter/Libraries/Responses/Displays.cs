@@ -7529,6 +7529,16 @@ namespace Implem.Pleasanter.Libraries.Responses
                 data: data);
         }
 
+        public static string RequireSecondAuthenticationByMail(
+            Context context,
+            params string[] data)
+        {
+            return Get(
+                context: context,
+                id: "RequireSecondAuthenticationByMail",
+                data: data);
+        }
+
         public static string RequireTo(
             Context context,
             params string[] data)

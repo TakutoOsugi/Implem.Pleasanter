@@ -3666,7 +3666,7 @@ namespace Implem.Pleasanter.Models
         /// <summary>
         /// Fixed:
         /// </summary>
-        public string Authenticate(Context context, string returnUrl)
+        public string Authenticate(Context context, string returnUrl, bool isAuthenticationByMail)
         {
             if (Parameters.Security.RevealUserDisabled && DisabledUser(context: context))
             {
@@ -3694,10 +3694,14 @@ namespace Implem.Pleasanter.Models
                     return string.IsNullOrEmpty(SecretKey)
                         ? OpenGoogleAuthenticatorRegisterCode(context: context)
                         : string.IsNullOrEmpty(secondaryAuthenticationCode)
-                        ? OpenSecondaryAuthentication(context: context)
+                            ? OpenSecondaryAuthentication(
+                                context: context,
+                                returnUrl: returnUrl,
+                                isAuthenticationByMail: isAuthenticationByMail)
                             : !SecondaryAuthentication(
                                     context: context,
-                                secondaryAuthenticationCode: secondaryAuthenticationCode)
+                                    secondaryAuthenticationCode: secondaryAuthenticationCode,
+                                    isAuthenticationByMail: isAuthenticationByMail)
                                 ? Messages
                                     .ResponseSecondaryAuthentication(
                                         context: context,
@@ -4167,9 +4171,15 @@ namespace Implem.Pleasanter.Models
         /// <summary>
         /// Fixed:
         /// </summary>
-        private string OpenSecondaryAuthentication(Context context)
+        private string OpenSecondaryAuthentication(Context context, string returnUrl, bool isAuthenticationByMail)
+        {
+            if (Parameters.Security?.SecondaryAuthentication?.NotificationType == ParameterAccessor.Parts.SecondaryAuthentication.SecondaryAuthenticationModeNotificationType.Mail)
             {
-            if (Parameters.Security?.SecondaryAuthentication?.NotificationType == ParameterAccessor.Parts.SecondaryAuthentication.SecondaryAuthenticationModeNotificationType.Mail) {
+                isAuthenticationByMail = true;
+            }
+
+            if (isAuthenticationByMail)
+            {
                 UpdateSecondaryAuthenticationCode(context: context);
                 NotificationSecondaryAuthenticationCode(context: context);
             }
@@ -4187,11 +4197,21 @@ namespace Implem.Pleasanter.Models
                             controlCss: " focus always-send",
                             labelText: Displays.AuthenticationCode(context: context),
                             validateRequired: true,
-                            validateMaxLength: Parameters.Security?.SecondaryAuthentication?.NotificationType == ParameterAccessor.Parts.SecondaryAuthentication.SecondaryAuthenticationModeNotificationType.Mail
+                            validateMaxLength: isAuthenticationByMail
                                 ? 0
                                 : 6
                             ))
                 .Div(
+                    id: "AuthenticationByMail",
+                    attributes: new HtmlAttributes().Add(
+                        "data-isAuthenticationByMail",
+                        isAuthenticationByMail ? "1" : "0"),
+                    action: isAuthenticationByMail
+                        ? null
+                        : () => hb.A(
+                            href:"javascript:void(0)",
+                            text: Displays.RequireSecondAuthenticationByMail(context: context)))
+                    .Div(
                         id: "SecondaryAuthenticationCommands",
                         css: "both",
                         action: () => hb.Div(css: "command-right", action: () => hb
@@ -4511,10 +4531,9 @@ namespace Implem.Pleasanter.Models
         /// <summary>
         /// Fixed:
         /// </summary>
-        private bool SecondaryAuthentication(Context context, string secondaryAuthenticationCode)
+        private bool SecondaryAuthentication(Context context, string secondaryAuthenticationCode, bool isAuthenticationByMail)
         {
-            return
-                Parameters.Security?.SecondaryAuthentication?.NotificationType == ParameterAccessor.Parts.SecondaryAuthentication.SecondaryAuthenticationModeNotificationType.Mail
+            return isAuthenticationByMail
                 ? SecondaryAuthenticationCode == secondaryAuthenticationCode
                     && SecondaryAuthenticationCodeExpirationTime.Value.InRange()
                     && SecondaryAuthenticationCodeExpirationTime.Value > DateTime.Now
