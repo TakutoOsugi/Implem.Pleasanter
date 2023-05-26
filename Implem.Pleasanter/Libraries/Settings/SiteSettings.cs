@@ -2464,6 +2464,7 @@ namespace Implem.Pleasanter.Libraries.Settings
             return Columns
                 ?.Where(o => !o.NotSelect)
                 .Where(o => o.Required
+                    || !o.DefaultInput.IsNullOrEmpty()
                     || EditorColumnHash?.Any(tab => tab
                         .Value
                         ?.Contains(o.ColumnName) == true) == true);
@@ -3943,7 +3944,9 @@ namespace Implem.Pleasanter.Libraries.Settings
                     }
                 }
             }
-            return columns;
+            return columns
+                .DistinctBy(column => column.ColumnName)
+                .ToList();
         }
 
         public List<Link> GetUseSearchLinks(Context context)
@@ -5487,9 +5490,11 @@ namespace Implem.Pleasanter.Libraries.Settings
             return body;
         }
 
-        public bool GetNoDisplayIfReadOnly()
+        public bool GetNoDisplayIfReadOnly(Context context)
         {
-            return PermissionType == Permissions.Types.Read && NoDisplayIfReadOnly;
+            return context.HasPrivilege
+                ? false
+                : PermissionType == Permissions.Types.Read && NoDisplayIfReadOnly;
         }
 
         public void LinkActions(

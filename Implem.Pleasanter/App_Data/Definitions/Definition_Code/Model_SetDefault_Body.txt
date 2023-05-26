@@ -1,8 +1,13 @@
-﻿public void SetDefault(Context context, SiteSettings ss)
+﻿public void SetDefault(
+    Context context,
+    SiteSettings ss)
 {
     ss.Columns
         .Where(o => !o.DefaultInput.IsNullOrEmpty())
-        .ForEach(column => SetDefault(context: context, ss: ss, column: column));
+        .ForEach(column => SetDefault(
+            context: context,
+            ss: ss,
+            column: column));
 }
 
 public void SetCopyDefault(Context context, SiteSettings ss)
@@ -20,7 +25,10 @@ public void SetCopyDefault(Context context, SiteSettings ss)
             column: column));
 }
 
-public void SetDefault(Context context, SiteSettings ss, Column column)
+public void SetDefault(
+    Context context,
+    SiteSettings ss,
+    Column column)
 {
     var defaultInput = column.GetDefaultInput(context: context);
     switch (column.ColumnName)

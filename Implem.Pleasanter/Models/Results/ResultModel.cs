@@ -2311,11 +2311,16 @@ namespace Implem.Pleasanter.Models
             return statements;
         }
 
-        public void SetDefault(Context context, SiteSettings ss)
+        public void SetDefault(
+            Context context,
+            SiteSettings ss)
         {
             ss.Columns
                 .Where(o => !o.DefaultInput.IsNullOrEmpty())
-                .ForEach(column => SetDefault(context: context, ss: ss, column: column));
+                .ForEach(column => SetDefault(
+                    context: context,
+                    ss: ss,
+                    column: column));
         }
 
         public void SetCopyDefault(Context context, SiteSettings ss)
@@ -2333,7 +2338,10 @@ namespace Implem.Pleasanter.Models
                     column: column));
         }
 
-        public void SetDefault(Context context, SiteSettings ss, Column column)
+        public void SetDefault(
+            Context context,
+            SiteSettings ss,
+            Column column)
         {
             var defaultInput = column.GetDefaultInput(context: context);
             switch (column.ColumnName)
@@ -2349,9 +2357,6 @@ namespace Implem.Pleasanter.Models
                     break;
                 case "Locked":
                     Locked = defaultInput.ToBool();
-                    break;
-                case "Timestamp":
-                    Timestamp = defaultInput.ToString();
                     break;
                 case "Manager":
                     Manager = SiteInfo.User(
