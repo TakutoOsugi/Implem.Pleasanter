@@ -1,4 +1,4 @@
-﻿using Implem.DefinitionAccessor;
+﻿﻿using Implem.DefinitionAccessor;
 using Implem.Libraries.Classes;
 using Implem.Libraries.DataSources.SqlServer;
 using Implem.Libraries.Utilities;
@@ -15,6 +15,7 @@ using Implem.Pleasanter.Libraries.Security;
 using Implem.Pleasanter.Libraries.Server;
 using Implem.Pleasanter.Libraries.ServerScripts;
 using Implem.Pleasanter.Libraries.Settings;
+using OtpNet;
 using System;
 using System.Collections.Generic;
 using System.Data;
@@ -3689,7 +3690,9 @@ namespace Implem.Pleasanter.Models
                     var secondaryAuthenticationCode = context
                         .Forms
                         .Data("SecondaryAuthenticationCode");
-                    return string.IsNullOrEmpty(secondaryAuthenticationCode)
+                    return string.IsNullOrEmpty(SecretKey)
+                        ? OpenGoogleAuthenticatorRegisterCode(context: context)
+                        : string.IsNullOrEmpty(secondaryAuthenticationCode)
                         ? OpenSecondaryAuthentication(context: context)
                         : !SecondaryAuthentication(
                                 context: context,
@@ -4089,6 +4092,24 @@ namespace Implem.Pleasanter.Models
         /// <summary>
         /// Fixed:
         /// </summary>
+        private void UpdateSecretKey(Context context)
+        {
+            SecretKey = Base32Encoding.ToString(KeyGeneration.GenerateRandomKey(20));
+            Repository.ExecuteNonQuery(
+                context: context,
+                statements: Rds.UpdateUsers(
+                    where: Rds.UsersWhereDefault(
+                        context: context,
+                        userModel: this),
+                    param: Rds.UsersParam().SecretKey(SecretKey),
+                    addUpdatorParam: false,
+                    addUpdatedTimeParam: false));
+        }
+
+        /// <summary>
+        /// Fixed:
+        /// </summary>
+        // mail送信時にもSecondaryAuthenticationCodeを見ればわかる
         private void NotificationSecondaryAuthenticationCode(Context context)
         {
             var language = Language.IsNullOrEmpty()
@@ -4096,7 +4117,7 @@ namespace Implem.Pleasanter.Models
                 : Language;
             switch (Parameters.Security?.SecondaryAuthentication?.NotificationType)
             {
-                case "Mail":
+                case ParameterAccessor.Parts.SecondaryAuthentication.SecondaryAuthenticationModeNotificationType.Mail:
                     Repository.ExecuteTable(
                         context: context,
                         statements: Rds.SelectMailAddresses(
@@ -4135,17 +4156,12 @@ namespace Implem.Pleasanter.Models
         /// </summary>
         private string OpenSecondaryAuthentication(Context context)
         {
-            UpdateSecondaryAuthenticationCode(context: context);
-            NotificationSecondaryAuthenticationCode(context: context);
+            if (Parameters.Security?.SecondaryAuthentication?.NotificationType == ParameterAccessor.Parts.SecondaryAuthentication.SecondaryAuthenticationModeNotificationType.Mail) {
+                UpdateSecondaryAuthenticationCode(context: context);
+                NotificationSecondaryAuthenticationCode(context: context);
+            }
             var hb = new HtmlBuilder();
-            return new ResponseCollection(context: context)
-                .Css(
-                    target: "#Logins",
-                    name: "display",
-                    value: "none")
-                .Html(
-                    target: "#SecondaryAuthentications",
-                    value: hb
+            hb
                         .Div(
                             id: "SecondaryAuthenticationGuideTop",
                             action: () => hb.Raw(HtmlHtmls.ExtendedHtmls(
@@ -4157,7 +4173,11 @@ namespace Implem.Pleasanter.Models
                                 controlId: "SecondaryAuthenticationCode",
                                 controlCss: " focus always-send",
                                 labelText: Displays.AuthenticationCode(context: context),
-                                validateRequired: true))
+                            validateRequired: true,
+                            validateMaxLength: Parameters.Security?.SecondaryAuthentication?.NotificationType == ParameterAccessor.Parts.SecondaryAuthentication.SecondaryAuthenticationModeNotificationType.Mail
+                                ? 0
+                                : 6
+                            ))
                         .Div(
                             id: "SecondaryAuthenticationCommands",
                             css: "both",
@@ -4180,12 +4200,73 @@ namespace Implem.Pleasanter.Models
                             id: "SecondaryAuthenticationBottom",
                             action: () => hb.Raw(HtmlHtmls.ExtendedHtmls(
                                 context: context,
-                                id: "SecondaryAuthenticationGuideBottom"))))
+                            id: "SecondaryAuthenticationGuideBottom")));
+
+            return new ResponseCollection(context: context)
+                .Css(
+                    target: "#Logins",
+                    name: "display",
+                    value: "none")
+                .Html(
+                    target: "#SecondaryAuthentications",
+                    value: hb)
                 .Val(
                     target: "#BackUrl",
                     value: context.UrlReferrer,
                     _using: !context.UrlReferrer.IsNullOrEmpty())
                 .Focus("#SecondaryAuthenticationCode").ToJson();
+        }
+
+        /// <summary>
+        /// Fixed:
+        /// </summary>
+        private string OpenGoogleAuthenticatorRegisterCode(Context context)
+        {
+            UpdateSecretKey(context);
+
+            var hb = new HtmlBuilder();
+            return new ResponseCollection(context: context)
+                .Css(
+                    target: "#Logins",
+                    name: "display",
+                    value: "none")
+                .Html(
+                    target: "#GoogleAuthenticatorRegister",
+                    value: hb
+                        .Div(
+                            id: "GoogleAuthenticatorRegisterGuideTop",
+                            action: () => hb.Raw(HtmlHtmls.ExtendedHtmls(
+                                context: context,
+                                id: "GoogleAuthenticatorRegisterGuideTop")))
+                        .Div(
+                            id: "GoogleAuthenticatorQRCode",
+                            attributes: new HtmlAttributes().Add("data-url", "otpauth://totp/" + LoginId + "?secret=" + SecretKey + "&issuer=implemPlesanter"),
+                            action: () => hb.Span(
+                                id: "qrCode"))
+                        .Div(
+                            id: "GoogleAuthenticatorQRCodeText",
+                            action: () => hb.Span(
+                                id: "qrCodeText",
+                                action: () => hb.Text(SecretKey)))
+                        .Div(
+                            id: "GoogleAuthenticatorRegisterCommands",
+                            css: "both",
+                            action: () => hb.Div(css: "command-right", action: () => hb
+                                .Button(
+                                        text: Displays.Confirm(context: context),
+                                        controlCss: "button-icon ",
+                                        onClick: "$p.back();",
+                                        icon: "ui-icon-cancel")))
+                        .Div(
+                            id: "GoogleAuthenticatorRegisterBottom",
+                            action: () => hb.Raw(HtmlHtmls.ExtendedHtmls(
+                                context: context,
+                                id: "GoogleAuthenticatorRegisterBottom"))))
+                .Val(
+                    target: "#BackUrl",
+                    value: context.UrlReferrer,
+                    _using: !context.UrlReferrer.IsNullOrEmpty()).ToJson();
+
         }
 
         /// <summary>
@@ -4420,9 +4501,20 @@ namespace Implem.Pleasanter.Models
         private bool SecondaryAuthentication(Context context, string secondaryAuthenticationCode)
         {
             return
-                SecondaryAuthenticationCode == secondaryAuthenticationCode
-                && SecondaryAuthenticationCodeExpirationTime.Value.InRange()
-                && SecondaryAuthenticationCodeExpirationTime.Value > DateTime.Now;
+                Parameters.Security?.SecondaryAuthentication?.NotificationType == ParameterAccessor.Parts.SecondaryAuthentication.SecondaryAuthenticationModeNotificationType.Mail
+                ? SecondaryAuthenticationCode == secondaryAuthenticationCode
+                    && SecondaryAuthenticationCodeExpirationTime.Value.InRange()
+                    && SecondaryAuthenticationCodeExpirationTime.Value > DateTime.Now
+                : VerifyGoogleAuthenfication(secondaryAuthenticationCode);
+        }
+
+        private bool VerifyGoogleAuthenfication(string secondaryAuthenticationCode)
+        {
+            Totp totp = new Totp(Base32Encoding.ToBytes(SecretKey), totpSize: 6);
+
+            return totp.VerifyTotp(secondaryAuthenticationCode,
+                out _,
+                VerificationWindow.RfcSpecifiedNetworkDelay);
         }
 
         /// <summary>

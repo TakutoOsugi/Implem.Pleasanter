@@ -3921,7 +3921,8 @@ namespace Implem.Pleasanter.Models
                                             action: () => hb.Raw(HtmlHtmls.ExtendedHtmls(
                                                 context: context,
                                                 id: "LoginGuideBottom"))))
-                                .Div(id: "SecondaryAuthentications")))
+                                .Div(id: "SecondaryAuthentications")
+                                .Div(id: "GoogleAuthenticatorRegister")))
                     .Form(
                         attributes: new HtmlAttributes()
                             .Id("DemoForm")
