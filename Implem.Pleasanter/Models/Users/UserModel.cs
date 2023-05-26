@@ -21,6 +21,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
 using System.Linq;
+using System.Text.RegularExpressions;
 using static Implem.Pleasanter.Libraries.ServerScripts.ServerScriptModel;
 namespace Implem.Pleasanter.Models
 {
@@ -2599,7 +2600,7 @@ namespace Implem.Pleasanter.Models
             bool otherInitValue = false,
             bool setBySession = true,
             bool get = true,
-            bool checkConflict = true)
+            bool checkConflict = true) 
         {
             var userApiModel = context.RequestDataString.Deserialize<UserApiModel>();
             if (updateMailAddresses &&
@@ -3694,21 +3695,21 @@ namespace Implem.Pleasanter.Models
                         ? OpenGoogleAuthenticatorRegisterCode(context: context)
                         : string.IsNullOrEmpty(secondaryAuthenticationCode)
                         ? OpenSecondaryAuthentication(context: context)
-                        : !SecondaryAuthentication(
-                                context: context,
+                            : !SecondaryAuthentication(
+                                    context: context,
                                 secondaryAuthenticationCode: secondaryAuthenticationCode)
-                            ? Messages
-                                .ResponseSecondaryAuthentication(
-                                    context: context,
-                                    target: "#LoginMessage")
-                                .Focus("#SecondaryAuthenticationCode")
-                                .ToJson()
-                            : PasswordExpired()
-                                ? OpenChangePasswordAtLoginDialog(context: context)
-                                : Allow(
-                                    context: context,
-                                    returnUrl: GetReturnUrl(returnUrl: returnUrl),
-                                    createPersistentCookie: context.Forms.Bool("Users_RememberMe"));
+                                ? Messages
+                                    .ResponseSecondaryAuthentication(
+                                        context: context,
+                                        target: "#LoginMessage")
+                                    .Focus("#SecondaryAuthenticationCode")
+                                    .ToJson()
+                                : PasswordExpired()
+                                    ? OpenChangePasswordAtLoginDialog(context: context)
+                                    : Allow(
+                                        context: context,
+                                        returnUrl: GetReturnUrl(returnUrl: returnUrl),
+                                        createPersistentCookie: context.Forms.Bool("Users_RememberMe"));
                 }
                 else if (PasswordExpired())
                 {
@@ -4106,10 +4107,22 @@ namespace Implem.Pleasanter.Models
                     addUpdatedTimeParam: false));
         }
 
+
+        private string AddHyphenSecretKey()
+        {
+            string addHyphenSecretKey = string.Empty;
+
+            foreach (Match keys in Regex.Matches(SecretKey, "(....)"))
+            {
+                addHyphenSecretKey += keys + "-";
+            }
+
+            return addHyphenSecretKey[..^1];
+        }
+
         /// <summary>
         /// Fixed:
         /// </summary>
-        // mail送信時にもSecondaryAuthenticationCodeを見ればわかる
         private void NotificationSecondaryAuthenticationCode(Context context)
         {
             var language = Language.IsNullOrEmpty()
@@ -4155,51 +4168,51 @@ namespace Implem.Pleasanter.Models
         /// Fixed:
         /// </summary>
         private string OpenSecondaryAuthentication(Context context)
-        {
+            {
             if (Parameters.Security?.SecondaryAuthentication?.NotificationType == ParameterAccessor.Parts.SecondaryAuthentication.SecondaryAuthenticationModeNotificationType.Mail) {
                 UpdateSecondaryAuthenticationCode(context: context);
                 NotificationSecondaryAuthenticationCode(context: context);
             }
             var hb = new HtmlBuilder();
             hb
-                        .Div(
-                            id: "SecondaryAuthenticationGuideTop",
-                            action: () => hb.Raw(HtmlHtmls.ExtendedHtmls(
-                                context: context,
-                                id: "SecondaryAuthenticationGuideTop")))
-                        .Div(action: () => hb
-                            .FieldTextBox(
-                                textType: HtmlTypes.TextTypes.Password,
-                                controlId: "SecondaryAuthenticationCode",
-                                controlCss: " focus always-send",
-                                labelText: Displays.AuthenticationCode(context: context),
+                    .Div(
+                        id: "SecondaryAuthenticationGuideTop",
+                        action: () => hb.Raw(HtmlHtmls.ExtendedHtmls(
+                            context: context,
+                            id: "SecondaryAuthenticationGuideTop")))
+                    .Div(action: () => hb
+                        .FieldTextBox(
+                            textType: HtmlTypes.TextTypes.Password,
+                            controlId: "SecondaryAuthenticationCode",
+                            controlCss: " focus always-send",
+                            labelText: Displays.AuthenticationCode(context: context),
                             validateRequired: true,
                             validateMaxLength: Parameters.Security?.SecondaryAuthentication?.NotificationType == ParameterAccessor.Parts.SecondaryAuthentication.SecondaryAuthenticationModeNotificationType.Mail
                                 ? 0
                                 : 6
                             ))
-                        .Div(
-                            id: "SecondaryAuthenticationCommands",
-                            css: "both",
-                            action: () => hb.Div(css: "command-right", action: () => hb
-                                .Button(
-                                    controlId: "SecondaryAuthenticate",
-                                    controlCss: " button-icon validate",
-                                    text: Displays.Confirm(context: context),
-                                    onClick: "$p.send($(this));",
-                                    icon: "ui-icon-unlocked",
-                                    action: "Authenticate",
-                                    method: "post",
-                                    type: "submit")
-                                .Button(
-                                        text: Displays.Cancel(context: context),
-                                        controlCss: "button-icon ",
-                                        onClick: "$p.back();",
-                                        icon: "ui-icon-cancel")))
-                        .Div(
-                            id: "SecondaryAuthenticationBottom",
-                            action: () => hb.Raw(HtmlHtmls.ExtendedHtmls(
-                                context: context,
+                .Div(
+                        id: "SecondaryAuthenticationCommands",
+                        css: "both",
+                        action: () => hb.Div(css: "command-right", action: () => hb
+                            .Button(
+                                controlId: "SecondaryAuthenticate",
+                                controlCss: " button-icon validate",
+                                text: Displays.Confirm(context: context),
+                                onClick: "$p.send($(this));",
+                                icon: "ui-icon-unlocked",
+                                action: "Authenticate",
+                                method: "post",
+                                type: "submit")
+                            .Button(
+                                    text: Displays.Cancel(context: context),
+                                    controlCss: "button-icon ",
+                                    onClick: "$p.back();",
+                                    icon: "ui-icon-cancel")))
+                    .Div(
+                        id: "SecondaryAuthenticationBottom",
+                        action: () => hb.Raw(HtmlHtmls.ExtendedHtmls(
+                            context: context,
                             id: "SecondaryAuthenticationGuideBottom")));
 
             return new ResponseCollection(context: context)
@@ -4247,7 +4260,7 @@ namespace Implem.Pleasanter.Models
                             id: "GoogleAuthenticatorQRCodeText",
                             action: () => hb.Span(
                                 id: "qrCodeText",
-                                action: () => hb.Text(SecretKey)))
+                                action: () => hb.Text(AddHyphenSecretKey())))
                         .Div(
                             id: "GoogleAuthenticatorRegisterCommands",
                             css: "both",

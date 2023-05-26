@@ -200,6 +200,22 @@ pre{
     clear:both;
 }
 
+#GoogleAuthenticatorQRCode {
+    width: 38%;
+    height: 160px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+#GoogleAuthenticatorQRCodeText {
+    margin-left: auto;
+    margin-right: auto;
+}
+
+#qrCodeText{
+    font-size: 1.3em;
+}
+
 #Demo{
     width:500px;
     margin:0px auto;
