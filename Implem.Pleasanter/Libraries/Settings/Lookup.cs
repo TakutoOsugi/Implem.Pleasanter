@@ -609,6 +609,12 @@ namespace Implem.Pleasanter.Libraries.Settings
                             ss: ss,
                             column: column,
                             type: Type);
+                    case "SecretKey":
+                        return userModel.SecretKey.ToLookup(
+                            context: context,
+                            ss: ss,
+                            column: column,
+                            type: Type);
                     default:
                         switch (Def.ExtendedColumnTypes.Get(column?.Name ?? string.Empty))
                         {

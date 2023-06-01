@@ -10022,6 +10022,50 @@ namespace Implem.Pleasanter.Libraries.Responses
             return res.ValAndFormData("#Users_Timestamp", value);
         }
 
+        public static UsersResponseCollection SecretKey(
+            this UsersResponseCollection res,
+            Context context,
+            SiteSettings ss,
+            Column column = null)
+        {
+            return res.Val(
+                "#Users_SecretKey",
+                res.UserModel.SecretKey.ToResponse(
+                    context: context,
+                    ss: ss,
+                    column: column ?? ss.GetColumn(
+                        context: context,
+                        columnName: "SecretKey")));
+        }
+
+        public static UsersResponseCollection SecretKey(
+            this UsersResponseCollection res, Context context, string value)
+        {
+            return res.Val("#Users_SecretKey", value);
+        }
+
+        public static UsersResponseCollection SecretKey_FormData(
+            this UsersResponseCollection res,
+            Context context,
+            SiteSettings ss,
+            Column column = null)
+        {
+            return res.ValAndFormData(
+                "#Users_SecretKey",
+                res.UserModel.SecretKey.ToResponse(
+                    context: context,
+                    ss: ss,
+                    column: column ?? ss.GetColumn(
+                        context: context,
+                        columnName: "SecretKey")));
+        }
+
+        public static UsersResponseCollection SecretKey_FormData(
+            this UsersResponseCollection res, Context context, string value)
+        {
+            return res.ValAndFormData("#Users_SecretKey", value);
+        }
+
         public static PermissionsResponseCollection ReferenceId(
             this PermissionsResponseCollection res,
             Context context,

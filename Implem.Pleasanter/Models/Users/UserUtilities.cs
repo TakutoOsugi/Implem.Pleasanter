@@ -1058,6 +1058,24 @@ namespace Implem.Pleasanter.Models
                                     value: string.Empty,
                                     tabIndex: tabIndex,
                                     serverScriptModelColumn: serverScriptModelColumn);
+                    case "SecretKey":
+                        return ss.ReadColumnAccessControls.Allowed(
+                            context: context,
+                            ss: ss,
+                            column: column,
+                            mine: mine)
+                                ? hb.Td(
+                                    context: context,
+                                    column: column,
+                                    value: userModel.SecretKey,
+                                    tabIndex: tabIndex,
+                                    serverScriptModelColumn: serverScriptModelColumn)
+                                : hb.Td(
+                                    context: context,
+                                    column: column,
+                                    value: string.Empty,
+                                    tabIndex: tabIndex,
+                                    serverScriptModelColumn: serverScriptModelColumn);
                     case "Updator":
                         return ss.ReadColumnAccessControls.Allowed(
                             context: context,
@@ -1337,6 +1355,9 @@ namespace Implem.Pleasanter.Models
                         context: context,
                         column: column); break;
                     case "Creator": value = userModel.Creator.GridText(
+                        context: context,
+                        column: column); break;
+                    case "SecretKey": value = userModel.SecretKey.GridText(
                         context: context,
                         column: column); break;
                     case "Updator": value = userModel.Updator.GridText(
@@ -1757,6 +1778,12 @@ namespace Implem.Pleasanter.Models
                             column: column);
                 case "Theme":
                     return userModel.Theme
+                        .ToControl(
+                            context: context,
+                            ss: ss,
+                            column: column);
+                case "SecretKey":
+                    return userModel.SecretKey
                         .ToControl(
                             context: context,
                             ss: ss,
@@ -3098,6 +3125,9 @@ namespace Implem.Pleasanter.Models
                                 break;
                             case "Theme":
                                 userModel.Theme = recordingData.ToString();
+                                break;
+                            case "SecretKey":
+                                userModel.SecretKey = recordingData.ToString();
                                 break;
                             case "Body":
                                 userModel.Body = recordingData.ToString();
