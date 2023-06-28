@@ -4190,17 +4190,22 @@ namespace Implem.Pleasanter.Models
                         action: () => hb.Raw(HtmlHtmls.ExtendedHtmls(
                             context: context,
                             id: "SecondaryAuthenticationGuideTop")))
-                    .Div(action: () => hb
+                    .Div(action: isAuthenticationByMail
+                        ? () => hb
                         .FieldTextBox(
-                            textType: HtmlTypes.TextTypes.Password,
+                                textType: isAuthenticationByMail
+                                    ? HtmlTypes.TextTypes.Password
+                                    : HtmlTypes.TextTypes.Normal,
                             controlId: "SecondaryAuthenticationCode",
                             controlCss: " focus always-send",
                             labelText: Displays.AuthenticationCode(context: context),
                             validateRequired: true,
+                                validateNumber: true,
                             validateMaxLength: isAuthenticationByMail
                                 ? 0
                                 : 6
-                            ))
+                                )
+                        : () => MakeTotpForm(hb: hb, context: context))
                 .Div(
                     id: "AuthenticationByMail",
                     attributes: new HtmlAttributes().Add(
@@ -4235,7 +4240,7 @@ namespace Implem.Pleasanter.Models
                             context: context,
                             id: "SecondaryAuthenticationGuideBottom")));
 
-            return new ResponseCollection(context: context)
+            var rc = new ResponseCollection(context: context)
                 .Css(
                     target: "#Logins",
                     name: "display",
@@ -4246,8 +4251,58 @@ namespace Implem.Pleasanter.Models
                 .Val(
                     target: "#BackUrl",
                     value: context.UrlReferrer,
-                    _using: !context.UrlReferrer.IsNullOrEmpty())
-                .Focus("#SecondaryAuthenticationCode").ToJson();
+                    _using: !context.UrlReferrer.IsNullOrEmpty());
+
+            return isAuthenticationByMail ?
+                rc.Focus("#SecondaryAuthenticationCode").ToJson():
+                rc.Focus("#FirstTotpAuthenticationCode").ToJson();
+        }
+
+        private HtmlBuilder MakeTotpForm(HtmlBuilder hb, Context context)
+        {
+            return hb
+                .FieldTextBox(
+                    textType: HtmlTypes.TextTypes.Normal,
+                    controlId: "SecondaryAuthenticationCode",
+                    controlCss: "always-send totp-form",
+                    labelText: Displays.AuthenticationCode(context: context),
+                    validateRequired: true,
+                    validateNumber: true,
+                    validateMaxLength: 6)
+                .Div(
+                    id: "TotpAuthenticationCodeSeparate",
+                    action: () => hb
+                    .FieldTextBox(
+                        textType: HtmlTypes.TextTypes.Normal,
+                        controlId: "FirstTotpAuthenticationCode",
+                        controlCss: "focus totp-authentication-code",
+                        validateNumber: true
+                    )
+                    .FieldTextBox(
+                        textType: HtmlTypes.TextTypes.Normal,
+                        controlCss: "totp-authentication-code",
+                        validateNumber: true
+                    )
+                    .FieldTextBox(
+                        textType: HtmlTypes.TextTypes.Normal,
+                        controlCss: "totp-authentication-code",
+                        validateNumber: true
+                    )
+                    .FieldTextBox(
+                        textType: HtmlTypes.TextTypes.Normal,
+                        controlCss: "totp-authentication-code",
+                        validateNumber: true
+                    )
+                    .FieldTextBox(
+                        textType: HtmlTypes.TextTypes.Normal,
+                        controlCss: "totp-authentication-code",
+                        validateNumber: true
+                    )
+                    .FieldTextBox(
+                        textType: HtmlTypes.TextTypes.Normal,
+                        controlCss: "totp-authentication-code",
+                        validateNumber: true
+                    ));
         }
 
         /// <summary>
