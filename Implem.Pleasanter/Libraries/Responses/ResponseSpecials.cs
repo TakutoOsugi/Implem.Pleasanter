@@ -10022,48 +10022,48 @@ namespace Implem.Pleasanter.Libraries.Responses
             return res.ValAndFormData("#Users_Timestamp", value);
         }
 
-        public static UsersResponseCollection SecretKey(
+        public static UsersResponseCollection EnableSecretKey(
             this UsersResponseCollection res,
             Context context,
             SiteSettings ss,
             Column column = null)
         {
             return res.Val(
-                "#Users_SecretKey",
-                res.UserModel.SecretKey.ToResponse(
+                "#Users_EnableSecretKey",
+                res.UserModel.EnableSecretKey.ToResponse(
                     context: context,
                     ss: ss,
                     column: column ?? ss.GetColumn(
                         context: context,
-                        columnName: "SecretKey")));
+                        columnName: "EnableSecretKey")));
         }
 
-        public static UsersResponseCollection SecretKey(
+        public static UsersResponseCollection EnableSecretKey(
             this UsersResponseCollection res, Context context, string value)
         {
-            return res.Val("#Users_SecretKey", value);
+            return res.Val("#Users_EnableSecretKey", value);
         }
 
-        public static UsersResponseCollection SecretKey_FormData(
+        public static UsersResponseCollection EnableSecretKey_FormData(
             this UsersResponseCollection res,
             Context context,
             SiteSettings ss,
             Column column = null)
         {
             return res.ValAndFormData(
-                "#Users_SecretKey",
-                res.UserModel.SecretKey.ToResponse(
+                "#Users_EnableSecretKey",
+                res.UserModel.EnableSecretKey.ToResponse(
                     context: context,
                     ss: ss,
                     column: column ?? ss.GetColumn(
                         context: context,
-                        columnName: "SecretKey")));
+                        columnName: "EnableSecretKey")));
         }
 
-        public static UsersResponseCollection SecretKey_FormData(
+        public static UsersResponseCollection EnableSecretKey_FormData(
             this UsersResponseCollection res, Context context, string value)
         {
-            return res.ValAndFormData("#Users_SecretKey", value);
+            return res.ValAndFormData("#Users_EnableSecretKey", value);
         }
 
         public static PermissionsResponseCollection ReferenceId(

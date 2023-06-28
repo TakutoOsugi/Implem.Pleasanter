@@ -81,8 +81,8 @@
         }
     ],
     "SecondaryAuthentication": {
-        "Mode": "None",
-        "NotificationType": "Mail",
+        "Mode": "DefaultEnable",
+        "NotificationType": "GoogleAuthenticator",
         "NotificationMailBcc": false,
         "AuthenticationCodeCharacterType": "Number",
         "AuthenticationCodeLength": 8,

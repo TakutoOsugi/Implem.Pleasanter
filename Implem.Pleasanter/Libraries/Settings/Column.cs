@@ -2071,6 +2071,9 @@ namespace Implem.Pleasanter.Libraries.Settings
                         case "SecretKey":
                             sql.Users_SecretKey(tableName: path, _as: _as);
                             break;
+                        case "EnableSecretKey":
+                            sql.Users_EnableSecretKey(tableName: path, _as: _as);
+                            break;
                         case "LdapSearchRoot":
                             sql.Users_LdapSearchRoot(tableName: path, _as: _as);
                             break;

@@ -1058,7 +1058,7 @@ namespace Implem.Pleasanter.Models
                                     value: string.Empty,
                                     tabIndex: tabIndex,
                                     serverScriptModelColumn: serverScriptModelColumn);
-                    case "SecretKey":
+                    case "EnableSecretKey":
                         return ss.ReadColumnAccessControls.Allowed(
                             context: context,
                             ss: ss,
@@ -1067,7 +1067,7 @@ namespace Implem.Pleasanter.Models
                                 ? hb.Td(
                                     context: context,
                                     column: column,
-                                    value: userModel.SecretKey,
+                                    value: userModel.EnableSecretKey,
                                     tabIndex: tabIndex,
                                     serverScriptModelColumn: serverScriptModelColumn)
                                 : hb.Td(
@@ -1357,7 +1357,7 @@ namespace Implem.Pleasanter.Models
                     case "Creator": value = userModel.Creator.GridText(
                         context: context,
                         column: column); break;
-                    case "SecretKey": value = userModel.SecretKey.GridText(
+                    case "EnableSecretKey": value = userModel.EnableSecretKey.GridText(
                         context: context,
                         column: column); break;
                     case "Updator": value = userModel.Updator.GridText(
@@ -1782,8 +1782,8 @@ namespace Implem.Pleasanter.Models
                             context: context,
                             ss: ss,
                             column: column);
-                case "SecretKey":
-                    return userModel.SecretKey
+                case "EnableSecretKey":
+                    return userModel.EnableSecretKey
                         .ToControl(
                             context: context,
                             ss: ss,
@@ -2379,10 +2379,10 @@ namespace Implem.Pleasanter.Models
                                     value: userModel.SecondaryAuthenticationCodeExpirationTime.ToResponse(context: context, ss: ss, column: column),
                                     options: column.ResponseValOptions(serverScriptModelColumn: serverScriptModelColumn));
                                 break;
-                            case "SecretKey":
+                            case "EnableSecretKey":
                                 res.Val(
-                                    target: "#Users_SecretKey" + idSuffix,
-                                    value: userModel.SecretKey.ToResponse(context: context, ss: ss, column: column),
+                                    target: "#Users_EnableSecretKey" + idSuffix,
+                                    value: userModel.EnableSecretKey,
                                     options: column.ResponseValOptions(serverScriptModelColumn: serverScriptModelColumn));
                                 break;
                             case "LdapSearchRoot":
@@ -3126,8 +3126,8 @@ namespace Implem.Pleasanter.Models
                             case "Theme":
                                 userModel.Theme = recordingData.ToString();
                                 break;
-                            case "SecretKey":
-                                userModel.SecretKey = recordingData.ToString();
+                            case "EnableSecretKey":
+                                userModel.EnableSecretKey = recordingData.ToBool();
                                 break;
                             case "Body":
                                 userModel.Body = recordingData.ToString();
