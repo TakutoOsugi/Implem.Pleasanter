@@ -112,7 +112,8 @@ namespace Implem.Pleasanter.App_Start
                 "~/scripts/tenants.js",
                 "~/scripts/responsive.js",
                 "~/scripts/qr.js",
-                "~/scripts/authenticatebymail.js"
+                "~/scripts/authenticatebymail.js",
+                "~/scripts/splittotpform.js"
             };
         }
     }
