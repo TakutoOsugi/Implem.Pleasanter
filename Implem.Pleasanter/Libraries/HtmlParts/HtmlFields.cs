@@ -545,8 +545,7 @@ namespace Implem.Pleasanter.Libraries.HtmlParts
                                                 _using: !Parameters.General.HideCurrentDeptIcon
                                                     && column.Type == Column.Types.Dept);
                                     }
-                                },
-                                isUserMade: true);
+                                });
                         case ControlTypes.Radio:
                             return hb.FieldRadio(
                                 fieldId: controlId + "Field",
@@ -1241,21 +1240,16 @@ namespace Implem.Pleasanter.Libraries.HtmlParts
                             action: action,
                             method: method,
                             attributes: attributes);
-
-                        if(textType == HtmlTypes.TextTypes.Password)
+                        controlOption?.Invoke();
+                        if (textType == HtmlTypes.TextTypes.Password)
                         {
                             hb.Div(
                                 id: "show_password",
                             attributes: new HtmlAttributes()
-                                .Class("fa fa-eye show-password")
-                                .OnClick("$p.showPassword()"));
+                                .Class("material-symbols-outlined show-password")
+                                .OnClick("$p.showPassword()"),
+                            action: () => hb.Text("visibility"));
                         }
-
-                        controlOption?.Invoke();
-                        hb.Span(
-                            css: "unit",
-                            _using: !unit.IsNullOrEmpty(),
-                            action: () => hb.Text(unit));
                     })
                 : hb;
         }
@@ -1485,8 +1479,7 @@ namespace Implem.Pleasanter.Libraries.HtmlParts
             string extendedHtmlBetweenLabelAndControl = null,
             string extendedHtmlAfterControl = null,
             Action controlOption = null,
-            bool _using = true,
-            bool isUserMade = false)
+            bool _using = true)
         {
             return _using
                 ? hb.Field(
@@ -1524,8 +1517,7 @@ namespace Implem.Pleasanter.Libraries.HtmlParts
                                 validateRequired: validateRequired,
                                 action: action,
                                 method: method,
-                                column: column,
-                                isUserMade: isUserMade);
+                                column: column);
                         controlOption?.Invoke();
                     })
                 : hb;
