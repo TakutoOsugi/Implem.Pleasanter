@@ -191,6 +191,7 @@ namespace Implem.Pleasanter.Libraries.Settings
         public SettingList<ServerScript> ServerScripts;
         public SettingList<BulkUpdateColumn> BulkUpdateColumns;
         public SettingList<RelatingColumn> RelatingColumns;
+        public SettingList<DashboardPart> DashboardParts;
         public string ExtendedHeader;
         public Versions.AutoVerUpTypes? AutoVerUpType;
         public bool? AllowEditingComments;
@@ -343,6 +344,7 @@ namespace Implem.Pleasanter.Libraries.Settings
             if (ServerScripts == null) ServerScripts = new SettingList<ServerScript>();
             if (BulkUpdateColumns == null) BulkUpdateColumns = new SettingList<BulkUpdateColumn>();
             if (RelatingColumns == null) RelatingColumns = new SettingList<RelatingColumn>();
+            if (DashboardParts == null) DashboardParts = new SettingList<DashboardPart>();
             AutoVerUpType = AutoVerUpType ?? Versions.AutoVerUpTypes.Default;
             AllowEditingComments = AllowEditingComments ?? false;
             AllowCopy = AllowCopy ?? Parameters.General.AllowCopy;
@@ -404,8 +406,8 @@ namespace Implem.Pleasanter.Libraries.Settings
                 {
                     { SiteId, this }
                 };
-                JoinedSsHash = joinedSsHash;
             }
+            JoinedSsHash = joinedSsHash;
             if (destinations)
             {
                 Destinations = SiteSettingsList(
@@ -632,6 +634,21 @@ namespace Implem.Pleasanter.Libraries.Settings
                     return true;
                 default:
                     return false;
+            }
+        }
+
+        public bool IsDashboardEditor(Context context)
+        {
+            if (ReferenceType != "Dashboards")
+            {
+                return false;
+            }
+            switch (context.Action)
+            {
+                case "index":
+                    return false;
+                default:
+                    return true;
             }
         }
 
@@ -1079,6 +1096,14 @@ namespace Implem.Pleasanter.Libraries.Settings
                     ss.RelatingColumns = new SettingList<RelatingColumn>();
                 }
                 ss.RelatingColumns.Add(relatingColumn.GetRecordingData());
+            });
+            DashboardParts?.ForEach(dashboards =>
+            {
+                if(ss.DashboardParts == null)
+                {
+                    ss.DashboardParts = new SettingList<DashboardPart>();
+                }
+                ss.DashboardParts.Add(dashboards.GetRecordingData(context: context));
             });
             if (!ExtendedHeader.IsNullOrEmpty())
             {
@@ -1627,7 +1652,10 @@ namespace Implem.Pleasanter.Libraries.Settings
 
         private void UpdateColumnDefinitionHash()
         {
-            ColumnDefinitionHash = GetColumnDefinitionHash(ReferenceType);
+            ColumnDefinitionHash = GetColumnDefinitionHash(
+                ReferenceType == "Dashboards"
+                    ? "Issues"
+                    : ReferenceType);
         }
 
         private static Dictionary<string, ColumnDefinition> GetColumnDefinitionHash(
@@ -1803,6 +1831,7 @@ namespace Implem.Pleasanter.Libraries.Settings
             if (column != null)
             {
                 column.Id = column.Id ?? columnDefinition.Id;
+                column.LowSchemaVersion = columnDefinition.LowSchemaVersion();
                 column.No = columnDefinition.No;
                 column.Id_Ver =
                     ((columnDefinition.Unique || columnDefinition.Pk > 0)
@@ -1970,6 +1999,7 @@ namespace Implem.Pleasanter.Libraries.Settings
                 .GroupBy(o => o.ColumnName)
                 .Select(o => o.First())
                 .Where(o => ColumnDefinitionHash?.ContainsKey(o?.Name ?? string.Empty) == true)
+                .Where(o => !o.LowSchemaVersion)
                 .ToDictionary(o => o.ColumnName, o => o);
         }
 
@@ -2464,6 +2494,7 @@ namespace Implem.Pleasanter.Libraries.Settings
             return Columns
                 ?.Where(o => !o.NotSelect)
                 .Where(o => o.Required
+                    || !o.DefaultInput.IsNullOrEmpty()
                     || EditorColumnHash?.Any(tab => tab
                         .Value
                         ?.Contains(o.ColumnName) == true) == true);
@@ -2719,10 +2750,12 @@ namespace Implem.Pleasanter.Libraries.Settings
             return hash;
         }
 
-        public Dictionary<string, string> ViewSorterOptions(Context context)
+        public Dictionary<string, string> ViewSorterOptions(
+            Context context,
+            bool currentTableOnly = false)
         {
             var hash = new Dictionary<string, string>();
-            JoinOptions().ForEach(join =>
+            JoinOptions(currentTableOnly: currentTableOnly).ForEach(join =>
             {
                 var siteId = ColumnUtilities.GetSiteIdByTableAlias(join.Key, SiteId);
                 var ss = JoinedSsHash.Get(siteId);
@@ -3943,7 +3976,9 @@ namespace Implem.Pleasanter.Libraries.Settings
                     }
                 }
             }
-            return columns;
+            return columns
+                .DistinctBy(column => column.ColumnName)
+                .ToList();
         }
 
         public List<Link> GetUseSearchLinks(Context context)
@@ -4376,7 +4411,7 @@ namespace Implem.Pleasanter.Libraries.Settings
                 .Sites_SiteId(link.SiteId)
                 .SearchTextWhere(
                     context: context,
-                    ss: Destinations?.Get(link.SiteId),
+                    ss: JoinedSsHash?.Get(link.SiteId),
                     searchText: searchIndexes?.Join(" "))
                 .CanRead(
                     context: context,
@@ -4492,6 +4527,21 @@ namespace Implem.Pleasanter.Libraries.Settings
                             return new Column()
                             {
                                 ColumnName = "Groups",
+                                TypeName = "nvarchar",
+                                ControlType = "ChoicesText",
+                                ChoicesText = "HasChoices"
+                            };
+                        default:
+                            break;
+                    }
+                    break;
+                case "Groups":
+                    switch (columnName)
+                    {
+                        case "GroupMembers":
+                            return new Column()
+                            {
+                                ColumnName = "GroupMembers",
                                 TypeName = "nvarchar",
                                 ControlType = "ChoicesText",
                                 ChoicesText = "HasChoices"
@@ -5003,7 +5053,8 @@ namespace Implem.Pleasanter.Libraries.Settings
         {
             return !IsSiteEditor(context: context)
                 ? Styles?
-                    .Where(style => peredicate(style))
+                    .Where(style =>style.Disabled != true
+                        && peredicate(style))
                     .Select(o => o.Body).Join("\n")
                 : null;
         }
@@ -5058,7 +5109,8 @@ namespace Implem.Pleasanter.Libraries.Settings
         {
             return !IsSiteEditor(context: context)
                 ? Scripts?
-                    .Where(script => peredicate(script))
+                    .Where(script => script.Disabled != true
+                        && peredicate(script))
                     .Select(o => o.Body).Join("\n")
                 : null;
         }
@@ -5487,9 +5539,11 @@ namespace Implem.Pleasanter.Libraries.Settings
             return body;
         }
 
-        public bool GetNoDisplayIfReadOnly()
+        public bool GetNoDisplayIfReadOnly(Context context)
         {
-            return PermissionType == Permissions.Types.Read && NoDisplayIfReadOnly;
+            return context.HasPrivilege
+                ? false
+                : PermissionType == Permissions.Types.Read && NoDisplayIfReadOnly;
         }
 
         public void LinkActions(

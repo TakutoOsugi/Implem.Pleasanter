@@ -354,7 +354,7 @@ namespace Implem.Pleasanter.Models
                         .GridHeader(
                             context: context,
                             ss: ss,
-                            columns: columns, 
+                            columns: columns,
                             view: view,
                             sort: false,
                             checkRow: checkRow,
@@ -593,6 +593,114 @@ namespace Implem.Pleasanter.Models
                                     context: context,
                                     column: column,
                                     value: sysLogModel.Method,
+                                    tabIndex: tabIndex,
+                                    serverScriptModelColumn: serverScriptModelColumn)
+                                : hb.Td(
+                                    context: context,
+                                    column: column,
+                                    value: string.Empty,
+                                    tabIndex: tabIndex,
+                                    serverScriptModelColumn: serverScriptModelColumn);
+                    case "Api":
+                        return ss.ReadColumnAccessControls.Allowed(
+                            context: context,
+                            ss: ss,
+                            column: column,
+                            mine: mine)
+                                ? hb.Td(
+                                    context: context,
+                                    column: column,
+                                    value: sysLogModel.Api,
+                                    tabIndex: tabIndex,
+                                    serverScriptModelColumn: serverScriptModelColumn)
+                                : hb.Td(
+                                    context: context,
+                                    column: column,
+                                    value: string.Empty,
+                                    tabIndex: tabIndex,
+                                    serverScriptModelColumn: serverScriptModelColumn);
+                    case "SiteId":
+                        return ss.ReadColumnAccessControls.Allowed(
+                            context: context,
+                            ss: ss,
+                            column: column,
+                            mine: mine)
+                                ? hb.Td(
+                                    context: context,
+                                    column: column,
+                                    value: sysLogModel.SiteId,
+                                    tabIndex: tabIndex,
+                                    serverScriptModelColumn: serverScriptModelColumn)
+                                : hb.Td(
+                                    context: context,
+                                    column: column,
+                                    value: string.Empty,
+                                    tabIndex: tabIndex,
+                                    serverScriptModelColumn: serverScriptModelColumn);
+                    case "ReferenceId":
+                        return ss.ReadColumnAccessControls.Allowed(
+                            context: context,
+                            ss: ss,
+                            column: column,
+                            mine: mine)
+                                ? hb.Td(
+                                    context: context,
+                                    column: column,
+                                    value: sysLogModel.ReferenceId,
+                                    tabIndex: tabIndex,
+                                    serverScriptModelColumn: serverScriptModelColumn)
+                                : hb.Td(
+                                    context: context,
+                                    column: column,
+                                    value: string.Empty,
+                                    tabIndex: tabIndex,
+                                    serverScriptModelColumn: serverScriptModelColumn);
+                    case "ReferenceType":
+                        return ss.ReadColumnAccessControls.Allowed(
+                            context: context,
+                            ss: ss,
+                            column: column,
+                            mine: mine)
+                                ? hb.Td(
+                                    context: context,
+                                    column: column,
+                                    value: sysLogModel.ReferenceType,
+                                    tabIndex: tabIndex,
+                                    serverScriptModelColumn: serverScriptModelColumn)
+                                : hb.Td(
+                                    context: context,
+                                    column: column,
+                                    value: string.Empty,
+                                    tabIndex: tabIndex,
+                                    serverScriptModelColumn: serverScriptModelColumn);
+                    case "Status":
+                        return ss.ReadColumnAccessControls.Allowed(
+                            context: context,
+                            ss: ss,
+                            column: column,
+                            mine: mine)
+                                ? hb.Td(
+                                    context: context,
+                                    column: column,
+                                    value: sysLogModel.Status,
+                                    tabIndex: tabIndex,
+                                    serverScriptModelColumn: serverScriptModelColumn)
+                                : hb.Td(
+                                    context: context,
+                                    column: column,
+                                    value: string.Empty,
+                                    tabIndex: tabIndex,
+                                    serverScriptModelColumn: serverScriptModelColumn);
+                    case "Description":
+                        return ss.ReadColumnAccessControls.Allowed(
+                            context: context,
+                            ss: ss,
+                            column: column,
+                            mine: mine)
+                                ? hb.Td(
+                                    context: context,
+                                    column: column,
+                                    value: sysLogModel.Description,
                                     tabIndex: tabIndex,
                                     serverScriptModelColumn: serverScriptModelColumn)
                                 : hb.Td(
@@ -1023,6 +1131,24 @@ namespace Implem.Pleasanter.Models
                     case "Method": value = sysLogModel.Method.GridText(
                         context: context,
                         column: column); break;
+                    case "Api": value = sysLogModel.Api.GridText(
+                        context: context,
+                        column: column); break;
+                    case "SiteId": value = sysLogModel.SiteId.GridText(
+                        context: context,
+                        column: column); break;
+                    case "ReferenceId": value = sysLogModel.ReferenceId.GridText(
+                        context: context,
+                        column: column); break;
+                    case "ReferenceType": value = sysLogModel.ReferenceType.GridText(
+                        context: context,
+                        column: column); break;
+                    case "Status": value = sysLogModel.Status.GridText(
+                        context: context,
+                        column: column); break;
+                    case "Description": value = sysLogModel.Description.GridText(
+                        context: context,
+                        column: column); break;
                     case "RequestData": value = sysLogModel.RequestData.GridText(
                         context: context,
                         column: column); break;
@@ -1402,6 +1528,42 @@ namespace Implem.Pleasanter.Models
                             context: context,
                             ss: ss,
                             column: column);
+                case "Api":
+                    return sysLogModel.Api
+                        .ToControl(
+                            context: context,
+                            ss: ss,
+                            column: column);
+                case "SiteId":
+                    return sysLogModel.SiteId
+                        .ToControl(
+                            context: context,
+                            ss: ss,
+                            column: column);
+                case "ReferenceId":
+                    return sysLogModel.ReferenceId
+                        .ToControl(
+                            context: context,
+                            ss: ss,
+                            column: column);
+                case "ReferenceType":
+                    return sysLogModel.ReferenceType
+                        .ToControl(
+                            context: context,
+                            ss: ss,
+                            column: column);
+                case "Status":
+                    return sysLogModel.Status
+                        .ToControl(
+                            context: context,
+                            ss: ss,
+                            column: column);
+                case "Description":
+                    return sysLogModel.Description
+                        .ToControl(
+                            context: context,
+                            ss: ss,
+                            column: column);
                 case "RequestData":
                     return sysLogModel.RequestData
                         .ToControl(
@@ -1730,6 +1892,12 @@ namespace Implem.Pleasanter.Models
                                     value: sysLogModel.Method.ToResponse(context: context, ss: ss, column: column),
                                     options: column.ResponseValOptions(serverScriptModelColumn: serverScriptModelColumn));
                                 break;
+                            case "Api":
+                                res.Val(
+                                    target: "#SysLogs_Api" + idSuffix,
+                                    value: sysLogModel.Api,
+                                    options: column.ResponseValOptions(serverScriptModelColumn: serverScriptModelColumn));
+                                break;
                             case "RequestData":
                                 res.Val(
                                     target: "#SysLogs_RequestData" + idSuffix,
@@ -1947,7 +2115,8 @@ namespace Implem.Pleasanter.Models
                                                         column: column,
                                                         baseModel: sysLogModel)
                                                             != Permissions.ColumnPermissionTypes.Update,
-                                                    allowDelete: column.AllowDeleteAttachments != false),
+                                                    allowDelete: column.AllowDeleteAttachments != false,
+                                                    validateRequired: column.ValidateRequired != false),
                                             options: column.ResponseValOptions(serverScriptModelColumn: serverScriptModelColumn));
                                         break;
                                 }
@@ -2160,9 +2329,8 @@ namespace Implem.Pleasanter.Models
             SysLogModel sysLogModel,
             List<Process> processes)
         {
-            var process = processes
-                .FirstOrDefault(o => !o.SuccessMessage.IsNullOrEmpty()
-                    && o.MatchConditions);
+            var process = processes?.FirstOrDefault(o => !o.SuccessMessage.IsNullOrEmpty()
+                && o.MatchConditions);
             if (process == null)
             {
                 return Messages.Updated(

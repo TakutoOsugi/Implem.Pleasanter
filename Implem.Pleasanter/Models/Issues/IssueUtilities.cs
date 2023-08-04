@@ -99,7 +99,7 @@ namespace Implem.Pleasanter.Models
                                 id: ss.SiteId)),
                         action: () => hb
                             .Div(
-                                id: "ViewSelectorField", 
+                                id: "ViewSelectorField",
                                 action: () => hb
                                     .ViewSelector(
                                         context: context,
@@ -431,7 +431,7 @@ namespace Implem.Pleasanter.Models
                         .GridHeader(
                             context: context,
                             ss: ss,
-                            columns: columns, 
+                            columns: columns,
                             view: view,
                             editRow: editRow,
                             checkRow: checkRow,
@@ -1579,7 +1579,8 @@ namespace Implem.Pleasanter.Models
                                     context: context,
                                     ss: ss,
                                     issueModel: issueModel,
-                                    serverScriptModelRow: serverScriptModelRow))
+                                    serverScriptModelRow: serverScriptModelRow)
+)
                         .Hidden(
                             controlId: "BaseUrl",
                             value: Locations.BaseUrl(context: context))
@@ -2681,7 +2682,8 @@ namespace Implem.Pleasanter.Models
                                                         column: column,
                                                         baseModel: issueModel)
                                                             != Permissions.ColumnPermissionTypes.Update,
-                                                    allowDelete: column.AllowDeleteAttachments != false),
+                                                    allowDelete: column.AllowDeleteAttachments != false,
+                                                    validateRequired: column.ValidateRequired != false),
                                             options: column.ResponseValOptions(serverScriptModelColumn: serverScriptModelColumn));
                                         break;
                                 }
@@ -3111,7 +3113,8 @@ namespace Implem.Pleasanter.Models
             var invalid = IssueValidators.OnCreating(
                 context: context,
                 ss: ss,
-                issueModel: issueModel);
+                issueModel: issueModel,
+                copy: copyFrom > 0);
             switch (invalid.Type)
             {
                 case Error.Types.None: break;
@@ -3244,11 +3247,16 @@ namespace Implem.Pleasanter.Models
                     context: context,
                     errorData: new ErrorData(type: Error.Types.ItemsLimit));
             }
+            var issueApiModel = context.RequestDataString.Deserialize<IssueApiModel>();
+            if (issueApiModel == null)
+            {
+                context.InvalidJsonData = !context.RequestDataString.IsNullOrEmpty();
+            }
             var issueModel = new IssueModel(
                 context: context,
                 ss: ss,
                 issueId: 0,
-                setByApi: true);
+                issueApiModel: issueApiModel);
             var invalid = IssueValidators.OnCreating(
                 context: context,
                 ss: ss,
@@ -3262,10 +3270,34 @@ namespace Implem.Pleasanter.Models
                     errorData: invalid);
             }
             issueModel.SiteId = ss.SiteId;
-            issueModel.SetTitle(context: context, ss: ss);
+            issueModel.SetTitle(
+                context: context,
+                ss: ss);
+            var process = ss.Processes?.FirstOrDefault(process => process.Id == issueApiModel.ProcessId);
+            if (process != null)
+            {
+                process.MatchConditions = issueModel.GetProcessMatchConditions(
+                    context: context,
+                    ss: ss,
+                    process: process);
+                if (process.MatchConditions && process.Accessable(
+                    context: context,
+                    ss: ss))
+                {
+                    issueModel.SetByProcess(
+                        context: context,
+                        ss: ss,
+                        process: process);
+                }
+                else if (process.ExecutionType != Process.ExecutionTypes.CreateOrUpdate)
+                {
+                    return ApiResults.BadRequest(context: context);
+                }
+            }
             var errorData = issueModel.Create(
                 context: context,
                 ss: ss,
+                processes: process?.ToSingleList(),
                 notice: true);
             BinaryUtilities.UploadImage(
                 context: context,
@@ -3279,16 +3311,22 @@ namespace Implem.Pleasanter.Models
                         id: issueModel.IssueId,
                         limitPerDate: context.ContractSettings.ApiLimit(),
                         limitRemaining: context.ContractSettings.ApiLimit() - ss.ApiCount,
-                        message: Displays.Created(
+                        message: CreatedMessage(
                             context: context,
-                            data: issueModel.Title.MessageDisplay(context: context)));
+                            ss: ss,
+                            issueModel: issueModel,
+                            process: process).Text);
                 case Error.Types.Duplicated:
-                    return ApiResults.Error(
+                    var duplicatedColumn = ss.GetColumn(
                         context: context,
-                        errorData: errorData,
-                        data: ss.GetColumn(
-                            context: context,
-                            columnName: errorData.ColumnName)?.LabelText);
+                        columnName: errorData.ColumnName);
+                    return ApiResults.Duplicated(
+                        context: context,
+                        message: duplicatedColumn?.MessageWhenDuplicated.IsNullOrEmpty() != false
+                            ? Displays.Duplicated(
+                                context: context,
+                                data: duplicatedColumn?.LabelText)
+                            : duplicatedColumn?.MessageWhenDuplicated);
                 default:
                     return ApiResults.Error(
                         context: context,
@@ -3302,11 +3340,16 @@ namespace Implem.Pleasanter.Models
             {
                 return false;
             }
+            var issueApiModel = context.RequestDataString.Deserialize<IssueApiModel>();
+            if (issueApiModel == null)
+            {
+                context.InvalidJsonData = !context.RequestDataString.IsNullOrEmpty();
+            }
             var issueModel = new IssueModel(
                 context: context,
                 ss: ss,
                 issueId: 0,
-                setByApi: true);
+                issueApiModel: issueApiModel);
             var invalid = IssueValidators.OnCreating(
                 context: context,
                 ss: ss,
@@ -3585,9 +3628,8 @@ namespace Implem.Pleasanter.Models
             IssueModel issueModel,
             List<Process> processes)
         {
-            var process = processes
-                .FirstOrDefault(o => !o.SuccessMessage.IsNullOrEmpty()
-                    && o.MatchConditions);
+            var process = processes?.FirstOrDefault(o => !o.SuccessMessage.IsNullOrEmpty()
+                && o.MatchConditions);
             if (process == null)
             {
                 return Messages.Updated(
@@ -4288,11 +4330,16 @@ namespace Implem.Pleasanter.Models
             {
                 return ApiResults.BadRequest(context: context);
             }
+            var issueApiModel = context.RequestDataString.Deserialize<IssueApiModel>();
+            if (issueApiModel == null)
+            {
+                context.InvalidJsonData = !context.RequestDataString.IsNullOrEmpty();
+            }
             var issueModel = new IssueModel(
                 context: context,
                 ss: ss,
                 issueId: issueId,
-                setByApi: true);
+                issueApiModel: issueApiModel);
             if (issueModel.AccessStatus != Databases.AccessStatuses.Selected)
             {
                 return ApiResults.Get(ApiResponses.NotFound(context: context));
@@ -4317,9 +4364,31 @@ namespace Implem.Pleasanter.Models
                 context: context,
                 ss: ss,
                 baseModel: issueModel);
+            var process = ss.Processes?.FirstOrDefault(process => process.Id == issueApiModel.ProcessId);
+            if (process != null)
+            {
+                process.MatchConditions = issueModel.GetProcessMatchConditions(
+                    context: context,
+                    ss: ss,
+                    process: process);
+                if (process.MatchConditions && process.Accessable(
+                    context: context,
+                    ss: ss))
+                {
+                    issueModel.SetByProcess(
+                        context: context,
+                        ss: ss,
+                        process: process);
+                }
+                else if (process.ExecutionType != Process.ExecutionTypes.CreateOrUpdate)
+                {
+                    return ApiResults.BadRequest(context: context);
+                }
+            }
             var errorData = issueModel.Update(
                 context: context,
                 ss: ss,
+                processes: process?.ToSingleList(),
                 notice: true,
                 previousTitle: previousTitle);
             BinaryUtilities.UploadImage(
@@ -4334,16 +4403,22 @@ namespace Implem.Pleasanter.Models
                         issueModel.IssueId,
                         limitPerDate: context.ContractSettings.ApiLimit(),
                         limitRemaining: context.ContractSettings.ApiLimit() - ss.ApiCount,
-                        message: Displays.Updated(
+                        message: UpdatedMessage(
                             context: context,
-                            data: issueModel.Title.MessageDisplay(context: context)));
+                            ss: ss,
+                            issueModel: issueModel,
+                            processes: process?.ToSingleList()).Text);
                 case Error.Types.Duplicated:
-                    return ApiResults.Error(
+                    var duplicatedColumn = ss.GetColumn(
                         context: context,
-                        errorData: errorData,
-                        data: ss.GetColumn(
-                            context: context,
-                            columnName: errorData.ColumnName)?.LabelText);
+                        columnName: errorData.ColumnName);
+                    return ApiResults.Duplicated(
+                        context: context,
+                        message: duplicatedColumn?.MessageWhenDuplicated.IsNullOrEmpty() != false
+                            ? Displays.Duplicated(
+                                context: context,
+                                data: duplicatedColumn?.LabelText)
+                            : duplicatedColumn?.MessageWhenDuplicated);
                 default:
                     return ApiResults.Error(
                         context: context,
@@ -4358,11 +4433,16 @@ namespace Implem.Pleasanter.Models
             string previousTitle,
             object model)
         {
+            var issueApiModel = context.RequestDataString.Deserialize<IssueApiModel>();
+            if (issueApiModel == null)
+            {
+                context.InvalidJsonData = !context.RequestDataString.IsNullOrEmpty();
+            }
             var issueModel = new IssueModel(
                 context: context,
                 ss: ss,
                 issueId: issueId,
-                setByApi: true);
+                issueApiModel: issueApiModel);
             if (issueModel.AccessStatus != Databases.AccessStatuses.Selected)
             {
                 return false;
@@ -4445,12 +4525,17 @@ namespace Implem.Pleasanter.Models
                         searchType: Column.SearchTypes.ExactMatch);
                 }
             });
+            var issueApiModel = context.RequestDataString.Deserialize<IssueApiModel>();
+            if (issueApiModel == null)
+            {
+                context.InvalidJsonData = !context.RequestDataString.IsNullOrEmpty();
+            }
             var issueModel = new IssueModel(
                 context: context,
                 ss: ss,
                 issueId: 0,
                 view: api.View,
-                setByApi: true);
+                issueApiModel: issueApiModel);
             switch (issueModel.AccessStatus)
             {
                 case Databases.AccessStatuses.Selected:
@@ -4505,16 +4590,113 @@ namespace Implem.Pleasanter.Models
                             context: context,
                             data: issueModel.Title.MessageDisplay(context: context)));
                 case Error.Types.Duplicated:
-                    return ApiResults.Error(
+                    var duplicatedColumn = ss.GetColumn(
                         context: context,
-                        errorData: errorData,
-                        data: ss.GetColumn(
-                            context: context,
-                            columnName: errorData.ColumnName)?.LabelText);
+                        columnName: errorData.ColumnName);
+                    return ApiResults.Duplicated(
+                        context: context,
+                        message: duplicatedColumn?.MessageWhenDuplicated.IsNullOrEmpty() != false
+                            ? Displays.Duplicated(
+                                context: context,
+                                data: duplicatedColumn?.LabelText)
+                            : duplicatedColumn?.MessageWhenDuplicated);
                 default:
                     return ApiResults.Error(
                         context: context,
                         errorData: errorData);
+            }
+        }
+
+        public static bool UpsertByServerScript(
+            Context context,
+            SiteSettings ss,
+            string previousTitle,
+            object model)
+        {
+            var api = context.RequestDataString.Deserialize<Api>();
+            var issueApiModel = context.RequestDataString.Deserialize<IssueApiModel>();
+            if (api?.Keys?.Any() != true || issueApiModel == null)
+            {
+                context.InvalidJsonData = !context.RequestDataString.IsNullOrEmpty();
+                return false;
+            }
+            api.View = api.View ?? new View();
+            api.Keys.ForEach(columnName =>
+            {
+                var objectValue = issueApiModel.ObjectValue(columnName: columnName);
+                if (objectValue != null)
+                {
+                    api.View.AddColumnFilterHash(
+                        context: context,
+                        ss: ss,
+                        column: ss.GetColumn(
+                            context: context,
+                            columnName: columnName),
+                        objectValue: objectValue);
+                    api.View.AddColumnFilterSearchTypes(
+                        columnName: columnName,
+                        searchType: Column.SearchTypes.ExactMatch);
+                }
+            });
+            var issueModel = new IssueModel(
+                context: context,
+                ss: ss,
+                issueId: 0,
+                view: api.View,
+                issueApiModel: issueApiModel);
+            switch (issueModel.AccessStatus)
+            {
+                case Databases.AccessStatuses.Selected:
+                    break;
+                case Databases.AccessStatuses.NotFound:
+                    return CreateByServerScript(
+                        context: context,
+                        ss: ss,
+                        model: model);
+                default:
+                    return false;
+            }
+            var invalid = IssueValidators.OnUpdating(
+                context: context,
+                ss: ss,
+                issueModel: issueModel,
+                api: true,
+                serverScript: true);
+            switch (invalid.Type)
+            {
+                case Error.Types.None:
+                    break;
+                default:
+                    return false;
+            }
+            issueModel.SiteId = ss.SiteId;
+            issueModel.SetTitle(
+                context: context,
+                ss: ss);
+            issueModel.VerUp = Versions.MustVerUp(
+                context: context,
+                ss: ss,
+                baseModel: issueModel);
+            var errorData = issueModel.Update(
+                context: context,
+                ss: ss,
+                notice: true,
+                previousTitle: previousTitle);
+            switch (errorData.Type)
+            {
+                case Error.Types.None:
+                    if (model is Libraries.ServerScripts.ServerScriptModelApiModel serverScriptModelApiModel)
+                    {
+                        if (serverScriptModelApiModel.Model is IssueModel data)
+                        {
+                            data.SetByModel(issueModel: issueModel);
+                        }
+                    }
+                    return true;
+                case Error.Types.Duplicated:
+                    return false;
+                default:
+                    return false;
             }
         }
 
@@ -5171,6 +5353,7 @@ namespace Implem.Pleasanter.Models
                 context: context,
                 ss: ss,
                 column: HistoryColumn(columns),
+                join: ss.Join(context: context),
                 where: Rds.IssuesWhere().IssueId(issueModel.IssueId),
                 orderBy: Rds.IssuesOrderBy().Ver(SqlOrderBy.Types.desc),
                 tableType: Sqls.TableTypes.NormalAndHistory)
@@ -5213,7 +5396,7 @@ namespace Implem.Pleasanter.Models
                 .Ver();
             columns.ForEach(column =>
                 sqlColumn.IssuesColumn(columnName: column.ColumnName));
-            return sqlColumn;
+            return sqlColumn.ItemTitle(tableName: "Issues");
         }
 
         public static string History(Context context, SiteSettings ss, long issueId)
@@ -6923,9 +7106,11 @@ namespace Implem.Pleasanter.Models
                     : 0,
                 update: true,
                 message: updated
-                    ? Messages.Updated(
-                        context: context,
-                        data: issueModel.Title.MessageDisplay(context: context))
+                    ? context.ErrorData.Type != Error.Types.None
+                        ? context.ErrorData.Message(context: context)
+                        : Messages.Updated(
+                            context: context,
+                            data: issueModel.Title.MessageDisplay(context: context))
                     : null);
         }
 
@@ -8293,6 +8478,11 @@ namespace Implem.Pleasanter.Models
             }
             var view = Views.GetBySession(context: context, ss: ss);
             var bodyOnly = context.Forms.ControlId().StartsWith("Kamban");
+            var res = new ResponseCollection(context: context);
+            if (context.ErrorData.Type != Error.Types.None)
+            {
+                res.Message(context.ErrorData.Message(context: context));
+            }
             if (InRange(
                 context: context,
                 ss: ss,
@@ -8307,7 +8497,7 @@ namespace Implem.Pleasanter.Models
                     changedItemId: updated
                         ? context.Forms.Long("KambanId")
                         : 0);
-                return new ResponseCollection(context: context)
+                return res
                     .ViewMode(
                         context: context,
                         ss: ss,
@@ -8327,7 +8517,7 @@ namespace Implem.Pleasanter.Models
                     view: view,
                     bodyOnly: bodyOnly,
                     inRange: false);
-                return new ResponseCollection(context: context)
+                return res
                     .ViewMode(
                         context: context,
                         ss: ss,
@@ -8869,6 +9059,174 @@ namespace Implem.Pleasanter.Models
                     issueModel.Updator.Name,
                     issueModel.UpdatedTime.DisplayValue.ToString(context.CultureInfo())
                 });
+        }
+
+        public static string ReplaceLineByIssueModel(
+            this IssueModel issueModel,
+            Context context,
+            SiteSettings ss,
+            string line,
+            string itemTitle,
+            bool checkColumnAccessControl = false)
+        {
+            foreach (var column in ss.IncludedColumns(line))
+            {
+                var allowed = checkColumnAccessControl == false
+                    || ss.ReadColumnAccessControls.Allowed(
+                        context: context,
+                        ss: ss,
+                        column: column,
+                        mine: issueModel.Mine(context: context));
+                if (!allowed)
+                {
+                    line = line.Replace($"[{column.Name}]", string.Empty);
+                    continue;
+                }
+                switch (column.ColumnName)
+                {
+                    case "Title":
+                        line = line.Replace("[Title]", itemTitle);
+                        break;
+                    case "SiteId":
+                        line = line.Replace(
+                            "[SiteId]", issueModel.SiteId.ToExport(
+                                context: context,
+                                column: column));
+                        break;
+                    case "UpdatedTime":
+                        line = line.Replace(
+                            "[UpdatedTime]", issueModel.UpdatedTime.ToExport(
+                                context: context,
+                                column: column));
+                        break;
+                    case "IssueId":
+                        line = line.Replace(
+                            "[IssueId]", issueModel.IssueId.ToExport(
+                                context: context,
+                                column: column));
+                        break;
+                    case "Ver":
+                        line = line.Replace(
+                            "[Ver]", issueModel.Ver.ToExport(
+                                context: context,
+                                column: column));
+                        break;
+                    case "Body":
+                        line = line.Replace(
+                            "[Body]", issueModel.Body.ToExport(
+                                context: context,
+                                column: column));
+                        break;
+                    case "StartTime":
+                        line = line.Replace(
+                            "[StartTime]", issueModel.StartTime.ToExport(
+                                context: context,
+                                column: column));
+                        break;
+                    case "CompletionTime":
+                        line = line.Replace(
+                            "[CompletionTime]", issueModel.CompletionTime.ToExport(
+                                context: context,
+                                column: column));
+                        break;
+                    case "WorkValue":
+                        line = line.Replace(
+                            "[WorkValue]", issueModel.WorkValue.ToExport(
+                                context: context,
+                                column: column));
+                        break;
+                    case "ProgressRate":
+                        line = line.Replace(
+                            "[ProgressRate]", issueModel.ProgressRate.ToExport(
+                                context: context,
+                                column: column));
+                        break;
+                    case "Status":
+                        line = line.Replace(
+                            "[Status]", issueModel.Status.ToExport(
+                                context: context,
+                                column: column));
+                        break;
+                    case "Manager":
+                        line = line.Replace(
+                            "[Manager]", issueModel.Manager.ToExport(
+                                context: context,
+                                column: column));
+                        break;
+                    case "Owner":
+                        line = line.Replace(
+                            "[Owner]", issueModel.Owner.ToExport(
+                                context: context,
+                                column: column));
+                        break;
+                    case "Locked":
+                        line = line.Replace(
+                            "[Locked]", issueModel.Locked.ToExport(
+                                context: context,
+                                column: column));
+                        break;
+                    case "Comments":
+                        line = line.Replace(
+                            "[Comments]", issueModel.Comments.ToExport(
+                                context: context,
+                                column: column));
+                        break;
+                    case "Creator":
+                        line = line.Replace(
+                            "[Creator]", issueModel.Creator.ToExport(
+                                context: context,
+                                column: column));
+                        break;
+                    case "Updator":
+                        line = line.Replace(
+                            "[Updator]", issueModel.Updator.ToExport(
+                                context: context,
+                                column: column));
+                        break;
+                    case "CreatedTime":
+                        line = line.Replace(
+                            "[CreatedTime]", issueModel.CreatedTime.ToExport(
+                                context: context,
+                                column: column));
+                        break;
+                    default:
+                        switch (Def.ExtendedColumnTypes.Get(column?.Name ?? string.Empty))
+                        {
+                            case "Class":
+                                line = line.Replace(
+                                    $"[{column.Name}]", issueModel.GetClass(column: column).ToExport(
+                                        context: context,
+                                        column: column));
+                                break;
+                            case "Num":
+                                line = line.Replace(
+                                    $"[{column.Name}]", issueModel.GetNum(column: column).ToExport(
+                                        context: context,
+                                        column: column));
+                                break;
+                            case "Date":
+                                line = line.Replace(
+                                    $"[{column.Name}]", issueModel.GetDate(column: column).ToExport(
+                                        context: context,
+                                        column: column));
+                                break;
+                            case "Description":
+                                line = line.Replace(
+                                    $"[{column.Name}]", issueModel.GetDescription(column: column).ToExport(
+                                        context: context,
+                                        column: column));
+                                break;
+                            case "Check":
+                                line = line.Replace(
+                                    $"[{column.Name}]", issueModel.GetCheck(column: column).ToExport(
+                                        context: context,
+                                        column: column));
+                                break;
+                        }
+                        break;
+                }
+            }
+            return line;
         }
     }
 }

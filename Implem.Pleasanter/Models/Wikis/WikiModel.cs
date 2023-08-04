@@ -40,12 +40,16 @@ namespace Implem.Pleasanter.Models
         public long SavedWikiId = 0;
         public bool SavedLocked = false;
 
-        public bool Locked_Updated(Context context, Column column = null)
+        public bool Locked_Updated(Context context, bool copy = false, Column column = null)
         {
-            return Locked != SavedLocked &&
-                (column == null ||
-                column.DefaultInput.IsNullOrEmpty() ||
-                column.GetDefaultInput(context: context).ToBool() != Locked);
+            if (copy && column?.CopyByDefault == true)
+            {
+                return column.GetDefaultInput(context: context).ToBool() != Locked;
+            }
+            return Locked != SavedLocked
+                &&  (column == null
+                    || column.DefaultInput.IsNullOrEmpty()
+                    || column.GetDefaultInput(context: context).ToBool() != Locked);
         }
 
         public string PropertyValue(Context context, Column column)
@@ -189,7 +193,7 @@ namespace Implem.Pleasanter.Models
             Context context,
             SiteSettings ss,
             Dictionary<string, string> formData = null,
-            bool setByApi = false,
+            WikiApiModel wikiApiModel = null,
             MethodTypes methodType = MethodTypes.NotSet)
         {
             OnConstructing(context: context);
@@ -201,7 +205,10 @@ namespace Implem.Pleasanter.Models
                     ss: ss,
                     formData: formData);
             }
-            if (setByApi) SetByApi(context: context, ss: ss);
+            if (wikiApiModel != null)
+            {
+                SetByApi(context: context, ss: ss, data: wikiApiModel);
+            }
             MethodType = methodType;
             OnConstructed(context: context);
         }
@@ -211,7 +218,8 @@ namespace Implem.Pleasanter.Models
             SiteSettings ss,
             long wikiId,
             Dictionary<string, string> formData = null,
-            bool setByApi = false,
+            WikiApiModel wikiApiModel = null,
+            SqlColumnCollection column = null,
             bool clearSessions = false,
             MethodTypes methodType = MethodTypes.NotSet)
         {
@@ -220,8 +228,10 @@ namespace Implem.Pleasanter.Models
             SiteId = ss.SiteId;
             if (context.QueryStrings.ContainsKey("ver"))
             {
-                Get(context: context,
+                Get(
+                    context: context,
                     tableType: Sqls.TableTypes.NormalAndHistory,
+                    column: column,
                     where: Rds.WikisWhereDefault(
                         context: context,
                         wikiModel: this)
@@ -229,7 +239,10 @@ namespace Implem.Pleasanter.Models
             }
             else
             {
-                Get(context: context, ss: ss);
+                Get(
+                    context: context,
+                    ss: ss,
+                    column: column);
             }
             if (clearSessions) ClearSessions(context: context);
             if (formData != null)
@@ -239,7 +252,10 @@ namespace Implem.Pleasanter.Models
                     ss: ss,
                     formData: formData);
             }
-            if (setByApi) SetByApi(context: context, ss: ss);
+            if (wikiApiModel != null)
+            {
+                SetByApi(context: context, ss: ss, data: wikiApiModel);
+            }
             if (SavedLocked)
             {
                 ss.SetLockedRecord(
@@ -886,29 +902,6 @@ namespace Implem.Pleasanter.Models
                 where: where,
                 param: param,
                 otherInitValue: otherInitValue));
-            if (ss.PermissionForUpdating?.Any() == true)
-            {
-                statements.AddRange(PermissionUtilities.UpdateStatements(
-                    context: context,
-                    ss: ss,
-                    referenceId: WikiId,
-                    columns: ss.Columns
-                        .Where(o => o.Type != Column.Types.Normal)
-                        .ToDictionary(
-                            o => $"{o.ColumnName},{o.Type}",
-                            o => (o.MultipleSelections == true
-                                ? PropertyValue(
-                                    context: context,
-                                    column: o)?.Deserialize<List<int>>()
-                                : PropertyValue(
-                                    context: context,
-                                    column: o)?.ToInt().ToSingleList()) ?? new List<int>()),
-                    permissions: ss.PermissionForUpdating));
-            }
-            else if (RecordPermissions != null)
-            {
-                statements.UpdatePermissions(context, ss, WikiId, RecordPermissions);
-            }
             if (additionalStatements?.Any() == true)
             {
                 statements.AddRange(additionalStatements);
@@ -1246,14 +1239,8 @@ namespace Implem.Pleasanter.Models
             AttachmentsHash = wikiModel.AttachmentsHash;
         }
 
-        public void SetByApi(Context context, SiteSettings ss)
+        public void SetByApi(Context context, SiteSettings ss, WikiApiModel data)
         {
-            var data = context.RequestDataString.Deserialize<WikiApiModel>();
-            if (data == null)
-            {
-                context.InvalidJsonData = !context.RequestDataString.IsNullOrEmpty();
-                return;
-            }
             if (data.Title != null) Title = new Title(data.WikiId.ToLong(), data.Title);
             if (data.Body != null) Body = data.Body.ToString().ToString();
             if (data.Locked != null) Locked = data.Locked.ToBool().ToBool();
@@ -1668,9 +1655,16 @@ namespace Implem.Pleasanter.Models
                             notification.Send(
                                 context: context,
                                 ss: ss,
-                                title: Displays.Created(
-                                    context: context,
-                                    data: Title.DisplayValue).ToString(),
+                                title: notification.Subject.IsNullOrEmpty()
+                                    ? Displays.Created(
+                                        context: context,
+                                        data: Title.DisplayValue).ToString()
+                                    : ReplacedDisplayValues(
+                                        context: context,
+                                        ss: ss,
+                                        value: notification.Subject.Replace(
+                                            "[NotificationTrigger]",
+                                            Displays.CreatedWord(context: context))),
                                 body: NoticeBody(
                                     context: context,
                                     ss: ss,
@@ -1692,9 +1686,16 @@ namespace Implem.Pleasanter.Models
                             notification.Send(
                                 context: context,
                                 ss: ss,
-                                title: Displays.Updated(
-                                    context: context,
-                                    data: Title.DisplayValue).ToString(),
+                                title: notification.Subject.IsNullOrEmpty()
+                                    ? Displays.Updated(
+                                        context: context,
+                                        data: Title.DisplayValue).ToString()
+                                    : ReplacedDisplayValues(
+                                        context: context,
+                                        ss: ss,
+                                        value: notification.Subject.Replace(
+                                            "[NotificationTrigger]",
+                                            Displays.UpdatedWord(context: context))),
                                 body: body,
                                 values: values);
                         }
@@ -1705,9 +1706,16 @@ namespace Implem.Pleasanter.Models
                             notification.Send(
                                 context: context,
                                 ss: ss,
-                                title: Displays.Deleted(
-                                    context: context,
-                                    data: Title.DisplayValue).ToString(),
+                                title: notification.Subject.IsNullOrEmpty()
+                                    ? Displays.Deleted(
+                                        context: context,
+                                        data: Title.DisplayValue).ToString()
+                                    : ReplacedDisplayValues(
+                                        context: context,
+                                        ss: ss,
+                                        value: notification.Subject.Replace(
+                                            "[NotificationTrigger]",
+                                            Displays.DeletedWord(context: context))),
                                 body: NoticeBody(
                                     context: context,
                                     ss: ss,

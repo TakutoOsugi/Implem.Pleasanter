@@ -56,52 +56,76 @@ namespace Implem.Pleasanter.Models
         public string SavedBody = string.Empty;
         public bool SavedDisabled = false;
 
-        public bool TenantId_Updated(Context context, Column column = null)
+        public bool TenantId_Updated(Context context, bool copy = false, Column column = null)
         {
-            return TenantId != SavedTenantId &&
-                (column == null ||
-                column.DefaultInput.IsNullOrEmpty() ||
-                column.GetDefaultInput(context: context).ToInt() != TenantId);
+            if (copy && column?.CopyByDefault == true)
+            {
+                return column.GetDefaultInput(context: context).ToInt() != TenantId;
+            }
+            return TenantId != SavedTenantId
+                &&  (column == null
+                    || column.DefaultInput.IsNullOrEmpty()
+                    || column.GetDefaultInput(context: context).ToInt() != TenantId);
         }
 
-        public bool DeptId_Updated(Context context, Column column = null)
+        public bool DeptId_Updated(Context context, bool copy = false, Column column = null)
         {
-            return DeptId != SavedDeptId &&
-                (column == null ||
-                column.DefaultInput.IsNullOrEmpty() ||
-                column.GetDefaultInput(context: context).ToInt() != DeptId);
+            if (copy && column?.CopyByDefault == true)
+            {
+                return column.GetDefaultInput(context: context).ToInt() != DeptId;
+            }
+            return DeptId != SavedDeptId
+                &&  (column == null
+                    || column.DefaultInput.IsNullOrEmpty()
+                    || column.GetDefaultInput(context: context).ToInt() != DeptId);
         }
 
-        public bool DeptCode_Updated(Context context, Column column = null)
+        public bool DeptCode_Updated(Context context, bool copy = false, Column column = null)
         {
-            return DeptCode != SavedDeptCode && DeptCode != null &&
-                (column == null ||
-                column.DefaultInput.IsNullOrEmpty() ||
-                column.GetDefaultInput(context: context).ToString() != DeptCode);
+            if (copy && column?.CopyByDefault == true)
+            {
+                return column.GetDefaultInput(context: context).ToString() != DeptCode;
+            }
+            return DeptCode != SavedDeptCode && DeptCode != null
+                &&  (column == null
+                    || column.DefaultInput.IsNullOrEmpty()
+                    || column.GetDefaultInput(context: context).ToString() != DeptCode);
         }
 
-        public bool DeptName_Updated(Context context, Column column = null)
+        public bool DeptName_Updated(Context context, bool copy = false, Column column = null)
         {
-            return DeptName != SavedDeptName && DeptName != null &&
-                (column == null ||
-                column.DefaultInput.IsNullOrEmpty() ||
-                column.GetDefaultInput(context: context).ToString() != DeptName);
+            if (copy && column?.CopyByDefault == true)
+            {
+                return column.GetDefaultInput(context: context).ToString() != DeptName;
+            }
+            return DeptName != SavedDeptName && DeptName != null
+                &&  (column == null
+                    || column.DefaultInput.IsNullOrEmpty()
+                    || column.GetDefaultInput(context: context).ToString() != DeptName);
         }
 
-        public bool Body_Updated(Context context, Column column = null)
+        public bool Body_Updated(Context context, bool copy = false, Column column = null)
         {
-            return Body != SavedBody && Body != null &&
-                (column == null ||
-                column.DefaultInput.IsNullOrEmpty() ||
-                column.GetDefaultInput(context: context).ToString() != Body);
+            if (copy && column?.CopyByDefault == true)
+            {
+                return column.GetDefaultInput(context: context).ToString() != Body;
+            }
+            return Body != SavedBody && Body != null
+                &&  (column == null
+                    || column.DefaultInput.IsNullOrEmpty()
+                    || column.GetDefaultInput(context: context).ToString() != Body);
         }
 
-        public bool Disabled_Updated(Context context, Column column = null)
+        public bool Disabled_Updated(Context context, bool copy = false, Column column = null)
         {
-            return Disabled != SavedDisabled &&
-                (column == null ||
-                column.DefaultInput.IsNullOrEmpty() ||
-                column.GetDefaultInput(context: context).ToBool() != Disabled);
+            if (copy && column?.CopyByDefault == true)
+            {
+                return column.GetDefaultInput(context: context).ToBool() != Disabled;
+            }
+            return Disabled != SavedDisabled
+                &&  (column == null
+                    || column.DefaultInput.IsNullOrEmpty()
+                    || column.GetDefaultInput(context: context).ToBool() != Disabled);
         }
 
         public string CsvData(
@@ -365,7 +389,7 @@ namespace Implem.Pleasanter.Models
             Context context,
             SiteSettings ss,
             Dictionary<string, string> formData = null,
-            bool setByApi = false,
+            DeptApiModel deptApiModel = null,
             MethodTypes methodType = MethodTypes.NotSet)
         {
             OnConstructing(context: context);
@@ -377,7 +401,10 @@ namespace Implem.Pleasanter.Models
                     ss: ss,
                     formData: formData);
             }
-            if (setByApi) SetByApi(context: context, ss: ss);
+            if (deptApiModel != null)
+            {
+                SetByApi(context: context, ss: ss, data: deptApiModel);
+            }
             MethodType = methodType;
             OnConstructed(context: context);
         }
@@ -387,7 +414,8 @@ namespace Implem.Pleasanter.Models
             SiteSettings ss,
             int deptId,
             Dictionary<string, string> formData = null,
-            bool setByApi = false,
+            DeptApiModel deptApiModel = null,
+            SqlColumnCollection column = null,
             bool clearSessions = false,
             List<int> switchTargets = null,
             MethodTypes methodType = MethodTypes.NotSet)
@@ -397,8 +425,10 @@ namespace Implem.Pleasanter.Models
             DeptId = deptId;
             if (context.QueryStrings.ContainsKey("ver"))
             {
-                Get(context: context,
+                Get(
+                    context: context,
                     tableType: Sqls.TableTypes.NormalAndHistory,
+                    column: column,
                     where: Rds.DeptsWhereDefault(
                         context: context,
                         deptModel: this)
@@ -406,7 +436,10 @@ namespace Implem.Pleasanter.Models
             }
             else
             {
-                Get(context: context, ss: ss);
+                Get(
+                    context: context,
+                    ss: ss,
+                    column: column);
             }
             if (clearSessions) ClearSessions(context: context);
             if (formData != null)
@@ -416,7 +449,10 @@ namespace Implem.Pleasanter.Models
                     ss: ss,
                     formData: formData);
             }
-            if (setByApi) SetByApi(context: context, ss: ss);
+            if (deptApiModel != null)
+            {
+                SetByApi(context: context, ss: ss, data: deptApiModel);
+            }
             SwitchTargets = switchTargets;
             MethodType = methodType;
             OnConstructed(context: context);
@@ -1278,14 +1314,8 @@ namespace Implem.Pleasanter.Models
             AttachmentsHash = deptModel.AttachmentsHash;
         }
 
-        public void SetByApi(Context context, SiteSettings ss)
+        public void SetByApi(Context context, SiteSettings ss, DeptApiModel data)
         {
-            var data = context.RequestDataString.Deserialize<DeptApiModel>();
-            if (data == null)
-            {
-                context.InvalidJsonData = !context.RequestDataString.IsNullOrEmpty();
-                return;
-            }
             if (data.DeptCode != null) DeptCode = data.DeptCode.ToString().ToString();
             if (data.DeptName != null) DeptName = data.DeptName.ToString().ToString();
             if (data.Body != null) Body = data.Body.ToString().ToString();

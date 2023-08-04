@@ -362,7 +362,7 @@ namespace Implem.Pleasanter.Models
                         .GridHeader(
                             context: context,
                             ss: ss,
-                            columns: columns, 
+                            columns: columns,
                             view: view,
                             checkRow: checkRow,
                             checkAll: checkAll,
@@ -2431,7 +2431,8 @@ namespace Implem.Pleasanter.Models
                                                         column: column,
                                                         baseModel: userModel)
                                                             != Permissions.ColumnPermissionTypes.Update,
-                                                    allowDelete: column.AllowDeleteAttachments != false),
+                                                    allowDelete: column.AllowDeleteAttachments != false,
+                                                    validateRequired: column.ValidateRequired != false),
                                             options: column.ResponseValOptions(serverScriptModelColumn: serverScriptModelColumn));
                                         break;
                                 }
@@ -2665,9 +2666,8 @@ namespace Implem.Pleasanter.Models
             UserModel userModel,
             List<Process> processes)
         {
-            var process = processes
-                .FirstOrDefault(o => !o.SuccessMessage.IsNullOrEmpty()
-                    && o.MatchConditions);
+            var process = processes?.FirstOrDefault(o => !o.SuccessMessage.IsNullOrEmpty()
+                && o.MatchConditions);
             if (process == null)
             {
                 return Messages.Updated(
@@ -3120,6 +3120,9 @@ namespace Implem.Pleasanter.Models
                             case "Disabled":
                                 userModel.Disabled = recordingData.ToBool();
                                 break;
+                            case "Lockout":
+                                userModel.Lockout = recordingData.ToBool();
+                                break;
                             case "ApiKey":
                                 userModel.ApiKey = recordingData.ToString();
                                 break;
@@ -3505,8 +3508,13 @@ namespace Implem.Pleasanter.Models
                 userModel: userModel);
             switch (invalid.Type)
             {
-                case Error.Types.None: break;
-                default: return invalid.MessageJson(context: context);
+                case Error.Types.None:
+                    break;
+                case Error.Types.IncorrectCurrentPassword:
+                    userModel.DenyLog(context: context);
+                    return invalid.MessageJson(context: context);
+                default:
+                    return invalid.MessageJson(context: context);
             }
             if (Parameters.Security.JoeAccountCheck
                 && context.Forms.Data("Users_ChangedPassword") == userModel.LoginId)
@@ -3525,7 +3533,7 @@ namespace Implem.Pleasanter.Models
                 ? error.MessageJson(context: context)
                 : userModel.Allow(
                     context: context,
-                    returnUrl: userModel.GetReturnUrl(returnUrl: context.Forms.Data("ReturnUrl")),
+                    returnUrl: context.Forms.Data("ReturnUrl"),
                     atLogin: true);
         }
 
@@ -3543,8 +3551,13 @@ namespace Implem.Pleasanter.Models
             var invalid = UserValidators.OnPasswordResetting(context: context);
             switch (invalid.Type)
             {
-                case Error.Types.None: break;
-                default: return invalid.MessageJson(context: context);
+                case Error.Types.None:
+                    break;
+                case Error.Types.IncorrectCurrentPassword:
+                    userModel.DenyLog(context: context);
+                    return invalid.MessageJson(context: context);
+                default:
+                    return invalid.MessageJson(context: context);
             }
             if (Parameters.Security.JoeAccountCheck
                 && context.Forms.Data("Users_AfterResetPassword") == userModel.LoginId)
@@ -4536,7 +4549,16 @@ namespace Implem.Pleasanter.Models
                     context: context,
                     errorData: new ErrorData(type: Error.Types.UsersLimit));
             }
-            var userModel = new UserModel(context, ss, 0, setByApi: true);
+            var userApiModel = context.RequestDataString.Deserialize<UserApiModel>();
+            if (userApiModel == null)
+            {
+                context.InvalidJsonData = !context.RequestDataString.IsNullOrEmpty();
+            }
+            var userModel = new UserModel(
+                context: context,
+                ss: ss,
+                userId: 0,
+                userApiModel: userApiModel);
             var invalid = UserValidators.OnCreating(
                 context: context,
                 ss: ss,
@@ -4549,11 +4571,18 @@ namespace Implem.Pleasanter.Models
                     context: context,
                     errorData: invalid);
             }
+            if (Parameters.Security.JoeAccountCheck
+                && (context.RequestDataString.Deserialize<UserApiModel>()?.Password ?? string.Empty) == userModel.LoginId)
+            {
+                return ApiResults.Error(
+                    context: context,
+                    errorData: new ErrorData(type: Error.Types.JoeAccountCheck));
+            }
             if (!Parameters.Security.DisableCheckPasswordPolicyIfApi)
             {
                 foreach (var policy in Parameters.Security.PasswordPolicies.Where(o => o.Enabled))
                 {
-                    if (!(context.RequestDataString.Deserialize<UserApiModel>().Password ?? "").RegexExists(policy.Regex))
+                    if (!(context.RequestDataString.Deserialize<UserApiModel>()?.Password ?? string.Empty).RegexExists(policy.Regex))
                     {
                         return ApiResults.Error(
                             context: context,
@@ -4598,7 +4627,16 @@ namespace Implem.Pleasanter.Models
             {
                 return ApiResults.BadRequest(context: context);
             }
-            var userModel = new UserModel(context, ss, userId: userId, setByApi: true);
+            var userApiModel = context.RequestDataString.Deserialize<UserApiModel>();
+            if (userApiModel == null)
+            {
+                context.InvalidJsonData = !context.RequestDataString.IsNullOrEmpty();
+            }
+            var userModel = new UserModel(
+                context: context,
+                ss: ss,
+                userId: userId,
+                userApiModel: userApiModel);
             if (userModel.AccessStatus != Databases.AccessStatuses.Selected)
             {
                 return ApiResults.Get(ApiResponses.NotFound(context: context));
@@ -4616,17 +4654,39 @@ namespace Implem.Pleasanter.Models
                        context: context,
                        errorData: invalid);
             }
+            if (Parameters.Security.JoeAccountCheck
+                && (context.RequestDataString.Deserialize<UserApiModel>()?.Password ?? string.Empty) == userModel.LoginId)
+            {
+                return ApiResults.Error(
+                    context: context,
+                    errorData: new ErrorData(type: Error.Types.JoeAccountCheck));
+            }
             if (!Parameters.Security.DisableCheckPasswordPolicyIfApi)
             {
                 foreach (var policy in Parameters.Security.PasswordPolicies.Where(o => o.Enabled))
                 {
-                    if (userModel.Password_Updated(context: context) && !userModel.Password.RegexExists(policy.Regex))
+                    if (userModel.Password_Updated(context: context) && !(context.RequestDataString.Deserialize<UserApiModel>()?.Password ?? string.Empty).RegexExists(policy.Regex))
                     {
                         return ApiResults.Error(
                             context: context,
                             errorData: new ErrorData(type: Error.Types.PasswordPolicyViolation));
                     }
                 }
+            }
+            if (!(context.RequestDataString.Deserialize<UserApiModel>()?.Password).IsNullOrEmpty())
+            {
+                userModel.ChangedPassword = (context.RequestDataString.Deserialize<UserApiModel>()?.Password ?? string.Empty).Sha512Cng();
+                var error = userModel.ChangePassword(context: context);
+                if (error.Has())
+                {
+                    return ApiResults.Error(
+                        context: context,
+                        errorData: new ErrorData(type: error));
+                }
+                userModel.SetByApi(
+                    context: context,
+                    ss: ss,
+                    data: userApiModel);
             }
             foreach (var column in ss.Columns
                 .Where(o => o.ValidateRequired ?? false)
@@ -4672,7 +4732,16 @@ namespace Implem.Pleasanter.Models
             {
                 return ApiResults.BadRequest(context: context);
             }
-            var userModel = new UserModel(context, ss, userId: userId, setByApi: true);
+            var userApiModel = context.RequestDataString.Deserialize<UserApiModel>();
+            if (userApiModel == null)
+            {
+                context.InvalidJsonData = !context.RequestDataString.IsNullOrEmpty();
+            }
+            var userModel = new UserModel(
+                context: context,
+                ss:ss,
+                userId: userId,
+                userApiModel: userApiModel);
             if (userModel.AccessStatus != Databases.AccessStatuses.Selected)
             {
                 return ApiResults.Get(ApiResponses.NotFound(context: context));

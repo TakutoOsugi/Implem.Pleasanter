@@ -1614,6 +1614,7 @@ namespace Implem.Pleasanter.Libraries.HtmlParts
                             controlCss: controlCss,
                             labelText: labelText,
                             labelIcon: labelIcon,
+                            controlOnly: controlOnly,
                             _checked: _checked,
                             disabled: disabled,
                             alwaysSend: alwaysSend,

@@ -356,7 +356,7 @@ namespace Implem.Pleasanter.Models
                         .GridHeader(
                             context: context,
                             ss: ss,
-                            columns: columns, 
+                            columns: columns,
                             view: view,
                             sort: false,
                             checkRow: checkRow,
@@ -972,6 +972,12 @@ namespace Implem.Pleasanter.Models
                                         referenceType: "Sites"))
                                 },
                                 {
+                                    "Dashboards",
+                                    new ControlData(ReferenceTypeDisplayName(
+                                        context: context,
+                                        referenceType: "Dashboards"))
+                                },
+                                {
                                     "Issues",
                                     new ControlData(ReferenceTypeDisplayName(
                                         context: context,
@@ -1004,6 +1010,7 @@ namespace Implem.Pleasanter.Models
             switch (referenceType)
             {
                 case "Sites": return Displays.Folder(context: context);
+                case "Dashboards": return Displays.Get(context: context, id: "Dashboards");
                 case "Issues": return Displays.Get(context: context, id: "Issues");
                 case "Results": return Displays.Get(context: context, id: "Results");
                 case "Wikis": return Displays.Get(context: context, id: "Wikis");
@@ -1252,9 +1259,8 @@ namespace Implem.Pleasanter.Models
             SiteModel siteModel,
             List<Process> processes)
         {
-            var process = processes
-                .FirstOrDefault(o => !o.SuccessMessage.IsNullOrEmpty()
-                    && o.MatchConditions);
+            var process = processes?.FirstOrDefault(o => !o.SuccessMessage.IsNullOrEmpty()
+                && o.MatchConditions);
             if (process == null)
             {
                 return Messages.Updated(
@@ -1772,9 +1778,9 @@ namespace Implem.Pleasanter.Models
         }
 
         private static int PhysicalBulkDelete(
-            Context context, 
-            SiteSettings ss, 
-            List<long> selected, 
+            Context context,
+            SiteSettings ss,
+            List<long> selected,
             bool negative = false,
             Sqls.TableTypes tableType = Sqls.TableTypes.Deleted)
         {
@@ -1877,7 +1883,7 @@ namespace Implem.Pleasanter.Models
             if (!Mime.ValidateOnApi(contentType: context.ContentType))
             {
                 return ApiResults.BadRequest(context: context);
-            }            
+            }
             var invalid = SiteValidators.OnEntry(
                 context: context,
                 ss: ss,
@@ -1911,11 +1917,16 @@ namespace Implem.Pleasanter.Models
             long parentId,
             long inheritPermission)
         {
+            var siteApiModel = context.RequestDataString.Deserialize<SiteApiModel>();
+            if (siteApiModel == null)
+            {
+                context.InvalidJsonData = !context.RequestDataString.IsNullOrEmpty();
+            }
             var siteModel = new SiteModel(
                 context: context,
                 parentId: parentId,
                 inheritPermission: inheritPermission,
-                setByApi: true);
+                siteApiModel: siteApiModel);
             var ss = siteModel.SiteSettings;
             if (!Mime.ValidateOnApi(contentType: context.ContentType))
             {
@@ -1971,6 +1982,59 @@ namespace Implem.Pleasanter.Models
         /// <summary>
         /// Fixed:
         /// </summary>
+        public static bool CreateByServerScript(Context context, SiteSettings ss, object model)
+        {
+            var siteApiModel = context.RequestDataString.Deserialize<SiteApiModel>();
+            if (siteApiModel == null)
+            {
+                context.InvalidJsonData = !context.RequestDataString.IsNullOrEmpty();
+            }
+            var siteModel = new SiteModel(
+                context: context,
+                parentId: ss.SiteId,
+                inheritPermission: ss.InheritPermission,
+                siteApiModel: siteApiModel);
+            if (context.ContractSettings.SitesLimit(context: context))
+            {
+                return false;
+            }
+            if (ss.ParentId == 0)
+            {
+                ss.PermissionType = context.SiteTopPermission();
+            }
+            var invalid = SiteValidators.OnCreating(
+                context: context,
+                ss: ss,
+                siteModel: siteModel);
+            switch (invalid.Type)
+            {
+                case Error.Types.None: break;
+                default:
+                    return false;
+            }
+            var errorData = siteModel.Create(
+                context: context,
+                otherInitValue: true);
+            switch (errorData.Type)
+            {
+                case Error.Types.None:
+                    if (model is Libraries.ServerScripts.ServerScriptModelApiModel serverScriptModelApiModel)
+                    {
+                        if (serverScriptModelApiModel.Model is SiteModel data)
+                        {
+                            data.SiteId = siteModel.SiteId;
+                            data.SetByModel(siteModel: siteModel);
+                        }
+                    }
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
+        /// <summary>
+        /// Fixed:
+        /// </summary>
         public static ContentResultInheritance UpdateByApi(
             Context context,
             SiteModel siteModel,
@@ -1981,9 +2045,15 @@ namespace Implem.Pleasanter.Models
                 return ApiResults.BadRequest(context: context);
             }
             var ss = siteModel.SiteSettings.SiteSettingsOnUpdate(context: context);
+            var siteApiModel = context.RequestDataString.Deserialize<SiteApiModel>();
+            if (siteApiModel == null)
+            {
+                context.InvalidJsonData = !context.RequestDataString.IsNullOrEmpty();
+            }
             siteModel.SetByApi(
                 context: context,
-                ss: ss);
+                ss: ss,
+                data: siteApiModel);
             siteModel.SiteSettings = SiteSettingsUtilities.Get(
                 context: context,
                 siteModel: siteModel,
@@ -2057,6 +2127,83 @@ namespace Implem.Pleasanter.Models
         /// <summary>
         /// Fixed:
         /// </summary>
+        public static bool UpdateByServerScript(
+            Context context,
+            SiteModel siteModel,
+            long siteId,
+            object model)
+        {
+            var ss = siteModel.SiteSettings.SiteSettingsOnUpdate(context: context);
+            var siteApiModel = context.RequestDataString.Deserialize<SiteApiModel>();
+            if (siteApiModel == null)
+            {
+                context.InvalidJsonData = !context.RequestDataString.IsNullOrEmpty();
+            }
+            siteModel.SetByApi(
+                context: context,
+                ss: ss,
+                data: siteApiModel);
+            siteModel.SiteSettings = SiteSettingsUtilities.Get(
+                context: context,
+                siteModel: siteModel,
+                referenceId: siteId);
+            var invalid = SiteValidators.OnUpdating(
+                context: context,
+                ss: ss,
+                siteModel: siteModel);
+            switch (invalid.Type)
+            {
+                case Error.Types.None: break;
+                default:
+                    return false;
+            }
+            siteModel.VerUp = Versions.MustVerUp(
+                context: context,
+                ss: ss,
+                baseModel: siteModel);
+            if (siteModel.InheritPermission > 0)
+            {
+                ss.InheritPermission = siteModel.InheritPermission;
+            }
+            if (siteModel.RecordPermissions?.Count > 0
+                && Parameters.Permissions.CheckManagePermission)
+            {
+                if (!new PermissionCollection(
+                    context: context,
+                    referenceId: siteModel.SiteId,
+                    permissions: siteModel.RecordPermissions)
+                        .Any(permission =>
+                            permission.PermissionType.HasFlag(
+                                Permissions.Types.ManagePermission
+                                | Permissions.Types.ManageSite)))
+                {
+                    return false;
+                }
+            }
+            var errorData = siteModel.Update(
+                context: context,
+                ss: ss);
+            switch (errorData.Type)
+            {
+                case Error.Types.None:
+                    if (model is Libraries.ServerScripts.ServerScriptModelApiModel serverScriptModelApiModel)
+                    {
+                        if (serverScriptModelApiModel.Model is SiteModel data)
+                        {
+                            data.SetByModel(siteModel: siteModel);
+                        }
+                    }
+                    return true;
+                case Error.Types.Duplicated:
+                    return false;
+                default:
+                    return false;
+            }
+        }
+
+        /// <summary>
+        /// Fixed:
+        /// </summary>
         public static ContentResultInheritance DeleteByApi(
             Context context,
             SiteSettings ss,
@@ -2095,6 +2242,43 @@ namespace Implem.Pleasanter.Models
                     return ApiResults.Error(
                         context: context,
                         errorData: errorData);
+            }
+        }
+
+        /// <summary>
+        /// Fixed:
+        /// </summary>
+        public static bool DeleteByServerScript(
+            Context context,
+            SiteSettings ss,
+            long siteId)
+        {
+            var siteModel = new SiteModel(context, siteId);
+            if (siteModel.AccessStatus != Databases.AccessStatuses.Selected)
+            {
+                return false;
+            }
+            var invalid = SiteValidators.OnDeleting(
+                context: context,
+                ss: ss,
+                siteModel: siteModel,
+                api: true,
+                serverScript: true);
+            switch (invalid.Type)
+            {
+                case Error.Types.None: break;
+                default:
+                    return false;
+            }
+            var errorData = siteModel.Delete(
+                context: context,
+                ss: ss);
+            switch (errorData.Type)
+            {
+                case Error.Types.None:
+                    return true;
+                default:
+                    return false;
             }
         }
 
@@ -2189,6 +2373,15 @@ namespace Implem.Pleasanter.Models
         private static HtmlBuilder TemplateTabsContainer(
             this HtmlBuilder hb, Context context, SiteSettings ss)
         {
+            var templates = Def.TemplateDefinitionCollection
+                .Where(o => o.Language == context.Language)
+                .ToList();
+            if (!templates.Any())
+            {
+                templates = Def.TemplateDefinitionCollection
+                    .Where(o => o.Language == "en")
+                    .ToList();
+            }
             return hb
                 .Div(
                     id: "TemplateTabsContainer",
@@ -2200,269 +2393,215 @@ namespace Implem.Pleasanter.Models
                                     .A(
                                         href: "#FieldSetStandard",
                                         text: Displays.Standard(context: context)),
-                                _using: Def.TemplateDefinitionCollection
-                                    .Where(o => o.Language == context.Language)
-                                    .Any(o => o.Standard > 0))
+                                _using: templates.Any(o => o.Standard > 0))
                             .Li(
                                 action: () => hb
                                     .A(
                                         href: "#FieldSetProject",
                                         text: Displays.Project(context: context)),
-                                _using: Def.TemplateDefinitionCollection
-                                    .Where(o => o.Language == context.Language)
-                                    .Any(o => o.Project > 0))
+                                _using: templates.Any(o => o.Project > 0))
                             .Li(
                                 action: () => hb
                                     .A(
                                         href: "#FieldSetBusinessImprovement",
                                         text: Displays.BusinessImprovement(context: context)),
-                                _using: Def.TemplateDefinitionCollection
-                                    .Where(o => o.Language == context.Language)
-                                    .Any(o => o.BusinessImprovement > 0))
+                                _using: templates.Any(o => o.BusinessImprovement > 0))
                             .Li(
                                 action: () => hb
                                     .A(
                                         href: "#FieldSetSales",
                                         text: Displays.Sales(context: context)),
-                                _using: Def.TemplateDefinitionCollection
-                                    .Where(o => o.Language == context.Language)
-                                    .Any(o => o.Sales > 0))
+                                _using: templates.Any(o => o.Sales > 0))
                             .Li(
                                 action: () => hb
                                     .A(
                                         href: "#FieldSetCustomer",
                                         text: Displays.Customer(context: context)),
-                                _using: Def.TemplateDefinitionCollection
-                                    .Where(o => o.Language == context.Language)
-                                    .Any(o => o.Customer > 0))
+                                _using: templates.Any(o => o.Customer > 0))
                             .Li(
                                 action: () => hb
                                     .A(
                                         href: "#FieldSetStore",
                                         text: Displays.Store(context: context)),
-                                _using: Def.TemplateDefinitionCollection
-                                    .Where(o => o.Language == context.Language)
-                                    .Any(o => o.Store > 0))
+                                _using: templates.Any(o => o.Store > 0))
                             .Li(
                                 action: () => hb
                                     .A(
                                         href: "#FieldSetResearchAndDevelopment",
                                         text: Displays.ResearchAndDevelopment(context: context)),
-                                _using: Def.TemplateDefinitionCollection
-                                    .Where(o => o.Language == context.Language)
-                                    .Any(o => o.ResearchAndDevelopment > 0))
+                                _using: templates.Any(o => o.ResearchAndDevelopment > 0))
                             .Li(
                                 action: () => hb
                                     .A(
                                         href: "#FieldSetMarketing",
                                         text: Displays.Marketing(context: context)),
-                                _using: Def.TemplateDefinitionCollection
-                                    .Where(o => o.Language == context.Language)
-                                    .Any(o => o.Marketing > 0))
+                                _using: templates.Any(o => o.Marketing > 0))
                             .Li(
                                 action: () => hb
                                     .A(
                                         href: "#FieldSetManufacture",
                                         text: Displays.Manufacture(context: context)),
-                                _using: Def.TemplateDefinitionCollection
-                                    .Where(o => o.Language == context.Language)
-                                    .Any(o => o.Manufacture > 0))
+                                _using: templates.Any(o => o.Manufacture > 0))
                             .Li(
                                 action: () => hb
                                     .A(
                                         href: "#FieldSetInformationSystem",
                                         text: Displays.InformationSystem(context: context)),
-                                _using: Def.TemplateDefinitionCollection
-                                    .Where(o => o.Language == context.Language)
-                                    .Any(o => o.InformationSystem > 0))
+                                _using: templates.Any(o => o.InformationSystem > 0))
                             .Li(
                                 action: () => hb
                                     .A(
                                         href: "#FieldSetCorporatePlanning",
                                         text: Displays.CorporatePlanning(context: context)),
-                                _using: Def.TemplateDefinitionCollection
-                                    .Where(o => o.Language == context.Language)
-                                    .Any(o => o.CorporatePlanning > 0))
+                                _using: templates.Any(o => o.CorporatePlanning > 0))
                             .Li(
                                 action: () => hb
                                     .A(
                                         href: "#FieldSetHumanResourcesAndGeneralAffairs",
                                         text: Displays.HumanResourcesAndGeneralAffairs(context: context)),
-                                _using: Def.TemplateDefinitionCollection
-                                    .Where(o => o.Language == context.Language)
-                                    .Any(o => o.HumanResourcesAndGeneralAffairs > 0))
+                                _using: templates.Any(o => o.HumanResourcesAndGeneralAffairs > 0))
                             .Li(
                                 action: () => hb
                                     .A(
                                         href: "#FieldSetEducation",
                                         text: Displays.Education(context: context)),
-                                _using: Def.TemplateDefinitionCollection
-                                    .Where(o => o.Language == context.Language)
-                                    .Any(o => o.Education > 0))
+                                _using: templates.Any(o => o.Education > 0))
                             .Li(
                                 action: () => hb
                                     .A(
                                         href: "#FieldSetPurchase",
                                         text: Displays.Purchase(context: context)),
-                                _using: Def.TemplateDefinitionCollection
-                                    .Where(o => o.Language == context.Language)
-                                    .Any(o => o.Purchase > 0))
+                                _using: templates.Any(o => o.Purchase > 0))
                             .Li(
                                 action: () => hb
                                     .A(
                                         href: "#FieldSetLogistics",
                                         text: Displays.Logistics(context: context)),
-                                _using: Def.TemplateDefinitionCollection
-                                    .Where(o => o.Language == context.Language)
-                                    .Any(o => o.Logistics > 0))
+                                _using: templates.Any(o => o.Logistics > 0))
                             .Li(
                                 action: () => hb
                                     .A(
                                         href: "#FieldSetLegalAffairs",
                                         text: Displays.LegalAffairs(context: context)),
-                                _using: Def.TemplateDefinitionCollection
-                                    .Where(o => o.Language == context.Language)
-                                    .Any(o => o.LegalAffairs > 0))
+                                _using: templates.Any(o => o.LegalAffairs > 0))
                             .Li(
                                 action: () => hb
                                     .A(
                                         href: "#FieldSetProductList",
                                         text: Displays.ProductList(context: context)),
-                                _using: Def.TemplateDefinitionCollection
-                                    .Where(o => o.Language == context.Language)
-                                    .Any(o => o.ProductList > 0))
+                                _using: templates.Any(o => o.ProductList > 0))
                             .Li(
                                 action: () => hb
                                     .A(
                                         href: "#FieldSetClassification",
                                         text: Displays.Classification(context: context)),
-                                _using: Def.TemplateDefinitionCollection
-                                    .Where(o => o.Language == context.Language)
-                                    .Any(o => o.Classification > 0)))
+                                _using: templates.Any(o => o.Classification > 0)))
                         .TemplateTab(
                             context: context,
                             name: "Standard",
-                            templates: Def.TemplateDefinitionCollection
-                                .Where(o => o.Language == context.Language)
+                            templates: templates
                                 .Where(o => o.Standard > 0)
                                 .OrderBy(o => o.Standard))
                         .TemplateTab(
                             context: context,
                             name: "Project",
-                            templates: Def.TemplateDefinitionCollection
-                                .Where(o => o.Language == context.Language)
+                            templates: templates
                                 .Where(o => o.Project > 0)
                                 .OrderBy(o => o.Project))
                         .TemplateTab(
                             context: context,
                             name: "BusinessImprovement",
-                            templates: Def.TemplateDefinitionCollection
-                                .Where(o => o.Language == context.Language)
+                            templates: templates
                                 .Where(o => o.BusinessImprovement > 0)
                                 .OrderBy(o => o.BusinessImprovement))
                         .TemplateTab(
                             context: context,
                             name: "Sales",
-                            templates: Def.TemplateDefinitionCollection
-                                .Where(o => o.Language == context.Language)
+                            templates: templates
                                 .Where(o => o.Sales > 0)
                                 .OrderBy(o => o.Sales))
                         .TemplateTab(
                             context: context,
                             name: "Customer",
-                            templates: Def.TemplateDefinitionCollection
-                                .Where(o => o.Language == context.Language)
+                            templates: templates
                                 .Where(o => o.Customer > 0)
                                 .OrderBy(o => o.Customer))
                         .TemplateTab(
                             context: context,
                             name: "Store",
-                            templates: Def.TemplateDefinitionCollection
-                                .Where(o => o.Language == context.Language)
+                            templates: templates
                                 .Where(o => o.Store > 0)
                                 .OrderBy(o => o.Store))
                         .TemplateTab(
                             context: context,
                             name: "ResearchAndDevelopment",
-                            templates: Def.TemplateDefinitionCollection
-                                .Where(o => o.Language == context.Language)
+                            templates: templates
                                 .Where(o => o.ResearchAndDevelopment > 0)
                                 .OrderBy(o => o.ResearchAndDevelopment))
                         .TemplateTab(
                             context: context,
                             name: "Marketing",
-                            templates: Def.TemplateDefinitionCollection
-                                .Where(o => o.Language == context.Language)
+                            templates: templates
                                 .Where(o => o.Marketing > 0)
                                 .OrderBy(o => o.Marketing))
                         .TemplateTab(
                             context: context,
                             name: "Manufacture",
-                            templates: Def.TemplateDefinitionCollection
-                                .Where(o => o.Language == context.Language)
+                            templates: templates
                                 .Where(o => o.Manufacture > 0)
                                 .OrderBy(o => o.Manufacture))
                         .TemplateTab(
                             context: context,
                             name: "InformationSystem",
-                            templates: Def.TemplateDefinitionCollection
-                                .Where(o => o.Language == context.Language)
+                            templates: templates
                                 .Where(o => o.InformationSystem > 0)
                                 .OrderBy(o => o.InformationSystem))
                         .TemplateTab(
                             context: context,
                             name: "CorporatePlanning",
-                            templates: Def.TemplateDefinitionCollection
-                                .Where(o => o.Language == context.Language)
+                            templates: templates
                                 .Where(o => o.CorporatePlanning > 0)
                                 .OrderBy(o => o.CorporatePlanning))
                         .TemplateTab(
                             context: context,
                             name: "HumanResourcesAndGeneralAffairs",
-                            templates: Def.TemplateDefinitionCollection
-                                .Where(o => o.Language == context.Language)
+                            templates: templates
                                 .Where(o => o.HumanResourcesAndGeneralAffairs > 0)
                                 .OrderBy(o => o.HumanResourcesAndGeneralAffairs))
                         .TemplateTab(
                             context: context,
                             name: "Education",
-                            templates: Def.TemplateDefinitionCollection
-                                .Where(o => o.Language == context.Language)
+                            templates: templates
                                 .Where(o => o.Education > 0)
                                 .OrderBy(o => o.Education))
                         .TemplateTab(
                             context: context,
                             name: "Purchase",
-                            templates: Def.TemplateDefinitionCollection
-                                .Where(o => o.Language == context.Language)
+                            templates: templates
                                 .Where(o => o.Purchase > 0)
                                 .OrderBy(o => o.Purchase))
                         .TemplateTab(
                             context: context,
                             name: "Logistics",
-                            templates: Def.TemplateDefinitionCollection
-                                .Where(o => o.Language == context.Language)
+                            templates: templates
                                 .Where(o => o.Logistics > 0)
                                 .OrderBy(o => o.Logistics))
                         .TemplateTab(
                             context: context,
                             name: "LegalAffairs",
-                            templates: Def.TemplateDefinitionCollection
-                                .Where(o => o.Language == context.Language)
+                            templates: templates
                                 .Where(o => o.LegalAffairs > 0)
                                 .OrderBy(o => o.LegalAffairs))
                         .TemplateTab(
                             context: context,
                             name: "ProductList",
-                            templates: Def.TemplateDefinitionCollection
-                                .Where(o => o.Language == context.Language)
+                            templates: templates
                                 .Where(o => o.ProductList > 0)
                                 .OrderBy(o => o.ProductList))
                         .TemplateTab(
                             context: context,
                             name: "Classification",
-                            templates: Def.TemplateDefinitionCollection
-                                .Where(o => o.Language == context.Language)
+                            templates: templates
                                 .Where(o => o.Classification > 0)
                                 .OrderBy(o => o.Classification)));
         }
@@ -3049,6 +3188,26 @@ namespace Implem.Pleasanter.Models
                                             href: "#ScriptsSettingsEditor",
                                             text: Displays.Scripts(context: context)),
                                     _using: context.ContractSettings.Script != false);
+                            break;
+                        case "Dashboards":
+                            hb
+                                .Li(
+                                    action: () => hb
+                                        .A(
+                                            href: "#DashboardPartSettingsEditor",
+                                            text: Displays.DashboardParts(context: context))
+                                .Li(
+                                    action: () => hb
+                                        .A(
+                                            href: "#StylesSettingsEditor",
+                                            text: Displays.Styles(context: context)),
+                                    _using: context.ContractSettings.Style != false)
+                                .Li(
+                                    action: () => hb
+                                        .A(
+                                            href: "#ScriptsSettingsEditor",
+                                            text: Displays.Scripts(context: context)),
+                                    _using: context.ContractSettings.Script != false));
                             break;
                         case "Wikis":
                             hb
@@ -3677,7 +3836,9 @@ namespace Implem.Pleasanter.Models
             {
                 switch (referenceType)
                 {
-                    case "Wikis": return hb;
+                    case "Wikis":
+                    case "Dashboards":
+                        return hb;
                     default: return hb.StackStyles();
                 }
             }
@@ -3750,8 +3911,9 @@ namespace Implem.Pleasanter.Models
                 siteModel.SiteMenu = (index != -1 ? index : int.MaxValue);
             });
             return siteCollection
-                .Where(o => !(context.PermissionHash.Get(o.SiteId) == Permissions.Types.Read
-                    && o.SiteSettings?.NoDisplayIfReadOnly == true))
+                .Where(o => context.HasPrivilege
+                    || !(context.PermissionHash.Get(o.SiteId) == Permissions.Types.Read
+                        && o.SiteSettings?.NoDisplayIfReadOnly == true))
                 .OrderBy(o => o.SiteMenu);
         }
 
@@ -3905,6 +4067,7 @@ namespace Implem.Pleasanter.Models
             switch (ss.ReferenceType)
             {
                 case "Sites":
+                case "Dashboards":
                     html = PreviewTemplate(
                         context: context,
                         ss: ss,
@@ -3955,9 +4118,12 @@ namespace Implem.Pleasanter.Models
                     .FieldSet(
                         id: name + "Editor",
                         action: () => hb
-                            .Div(css: "nav-site sites", action: () => hb
+                            .Div(css: "nav-site"
+                                    + (ss.ReferenceType != "Dashboards"
+                                        ? " sites"
+                                        : " dashboards"), action: () => hb
                                 .Span(css: "title", action: () => hb.Text(title))
-                                .Div(css: "heading"))))
+                                .Div(css: "heading", _using: ss.ReferenceType != "Dashboards"))))
                                     .ToString();
         }
 
@@ -4235,6 +4401,16 @@ namespace Implem.Pleasanter.Models
                     _using: context.ContractSettings.Script != false)
                 .Div(
                     attributes: new HtmlAttributes()
+                        .Id("DashboardPartDialog")
+                        .Class("dialog")
+                        .Title(Displays.Dashboards(context: context)))
+                .Div(
+                    attributes: new HtmlAttributes()
+                        .Id("DashboardPartTimeLineSitesDialog")
+                        .Class("dialog")
+                        .Title(Displays.SiteId(context: context)))
+                .Div(
+                    attributes: new HtmlAttributes()
                         .Id("ServerScriptDialog")
                         .Class("dialog")
                         .Title(Displays.ServerScript(context: context)),
@@ -4381,6 +4557,12 @@ namespace Implem.Pleasanter.Models
                             .StylesSettingsEditor(context: context, ss: siteModel.SiteSettings)
                             .ScriptsSettingsEditor(context: context, ss: siteModel.SiteSettings);
                         break;
+                    case "Dashboards":
+                        hb
+                            .DashboardPartSettingsEditor(context: context, ss: siteModel.SiteSettings)
+                            .StylesSettingsEditor(context: context, ss: siteModel.SiteSettings)
+                            .ScriptsSettingsEditor(context: context, ss: siteModel.SiteSettings);
+                        break;
                     case "Wikis":
                         hb
                             .NotificationsSettingsEditor(context: context, ss: siteModel.SiteSettings)
@@ -4454,7 +4636,9 @@ namespace Implem.Pleasanter.Models
                         fieldCss: "field-wide",
                         labelText: ss.ReferenceType == "Sites"
                             ? Displays.MenuGuide(context: context)
-                            : Displays.Sites_GridGuide(context: context),
+                            : (ss.ReferenceType == "Dashboards"
+                                ? Displays.DashboardGuide(context: context)
+                                : Displays.Sites_GridGuide(context: context)),
                         text: siteModel.GridGuide,
                         mobile: context.Mobile,
                         _using: siteModel.ReferenceType != "Wikis")
@@ -4466,7 +4650,8 @@ namespace Implem.Pleasanter.Models
                         labelText: Displays.Sites_EditorGuide(context: context),
                         text: siteModel.EditorGuide,
                         mobile: context.Mobile,
-                        _using: ss.ReferenceType != "Sites")
+                        _using: ss.ReferenceType != "Sites"
+                            && ss.ReferenceType != "Dashboards")
                     .FieldMarkDown(
                         context: context,
                         ss: ss,
@@ -4476,7 +4661,8 @@ namespace Implem.Pleasanter.Models
                         text: siteModel.CalendarGuide,
                         mobile: context.Mobile,
                         _using: ss.ReferenceType != "Sites"
-                            && ss.ReferenceType != "Wikis")
+                            && ss.ReferenceType != "Wikis"
+                            && ss.ReferenceType != "Dashboards")
                     .FieldMarkDown(
                         context: context,
                         ss: ss,
@@ -4486,7 +4672,8 @@ namespace Implem.Pleasanter.Models
                         text: siteModel.CrosstabGuide,
                         mobile: context.Mobile,
                         _using: ss.ReferenceType != "Sites"
-                            && ss.ReferenceType != "Wikis")
+                            && ss.ReferenceType != "Wikis"
+                            && ss.ReferenceType != "Dashboards")
                     .FieldMarkDown(
                         context: context,
                         ss: ss,
@@ -4514,7 +4701,8 @@ namespace Implem.Pleasanter.Models
                         text: siteModel.TimeSeriesGuide,
                         mobile: context.Mobile,
                         _using: ss.ReferenceType != "Sites"
-                            && ss.ReferenceType != "Wikis")
+                            && ss.ReferenceType != "Wikis"
+                            && ss.ReferenceType != "Dashboards")
                     .FieldMarkDown(
                         context: context,
                         ss: ss,
@@ -4524,7 +4712,8 @@ namespace Implem.Pleasanter.Models
                         text: siteModel.KambanGuide,
                         mobile: context.Mobile,
                         _using: ss.ReferenceType != "Sites"
-                            && ss.ReferenceType != "Wikis")
+                            && ss.ReferenceType != "Wikis"
+                            && ss.ReferenceType != "Dashboards")
                     .FieldMarkDown(
                         context: context,
                         ss: ss,
@@ -4534,7 +4723,8 @@ namespace Implem.Pleasanter.Models
                         text: siteModel.ImageLibGuide,
                         mobile: context.Mobile,
                         _using: ss.ReferenceType != "Sites"
-                            && ss.ReferenceType != "Wikis")));
+                            && ss.ReferenceType != "Wikis"
+                            && ss.ReferenceType != "Dashboards")));
         }
 
         /// <summary>
@@ -4619,7 +4809,7 @@ namespace Implem.Pleasanter.Models
                             text: Displays.Copy(context: context),
                             controlCss: "button-icon",
                             onClick: "$p.setAndSend('#EditBulkUpdateColumns', $(this));",
-                            icon: "ui-icon-trash",
+                            icon: "ui-icon-copy",
                             action: "SetSiteSettings",
                             method: "post")
                         .Button(
@@ -4719,13 +4909,13 @@ namespace Implem.Pleasanter.Models
                                     controlId: "MoveUpGridColumns",
                                     controlCss: "button-icon",
                                     text: Displays.MoveUp(context: context),
-                                    onClick: "$p.moveColumns($(this),'Grid',false,true);",
+                                    onClick: "$p.moveColumns(event, $(this),'Grid',false,true);",
                                     icon: "ui-icon-circle-triangle-n")
                                 .Button(
                                     controlId: "MoveDownGridColumns",
                                     controlCss: "button-icon",
                                     text: Displays.MoveDown(context: context),
-                                    onClick: "$p.moveColumns($(this),'Grid',false,true);",
+                                    onClick: "$p.moveColumns(event, $(this),'Grid',false,true);",
                                     icon: "ui-icon-circle-triangle-s")
                                 .Button(
                                     controlId: "OpenGridColumnDialog",
@@ -4739,7 +4929,7 @@ namespace Implem.Pleasanter.Models
                                     controlId: "ToDisableGridColumns",
                                     controlCss: "button-icon",
                                     text: Displays.ToDisable(context: context),
-                                    onClick: "$p.moveColumns($(this),'Grid',false,true);",
+                                    onClick: "$p.moveColumns(event, $(this),'Grid',false,true);",
                                     icon: "ui-icon-circle-triangle-e")))
                     .FieldSelectable(
                         controlId: "GridSourceColumns",
@@ -4756,7 +4946,7 @@ namespace Implem.Pleasanter.Models
                                     controlId: "ToEnableGridColumns",
                                     text: Displays.ToEnable(context: context),
                                     controlCss: "button-icon",
-                                    onClick: "$p.moveColumns($(this),'Grid',false,true);",
+                                    onClick: "$p.moveColumns(event, $(this),'Grid',false,true);",
                                     icon: "ui-icon-circle-triangle-w")
                                 .FieldDropDown(
                                     context: context,
@@ -4956,13 +5146,13 @@ namespace Implem.Pleasanter.Models
                                         controlId: "MoveUpFilterColumns",
                                         controlCss: "button-icon",
                                         text: Displays.MoveUp(context: context),
-                                        onClick: "$p.moveColumns($(this),'Filter',false,true);",
+                                        onClick: "$p.moveColumns(event, $(this),'Filter',false,true);",
                                         icon: "ui-icon-circle-triangle-n")
                                     .Button(
                                         controlId: "MoveDownFilterColumns",
                                         controlCss: "button-icon",
                                         text: Displays.MoveDown(context: context),
-                                        onClick: "$p.moveColumns($(this),'Filter',false,true);",
+                                        onClick: "$p.moveColumns(event, $(this),'Filter',false,true);",
                                         icon: "ui-icon-circle-triangle-s")
                                     .Button(
                                         controlId: "OpenFilterColumnDialog",
@@ -4976,7 +5166,7 @@ namespace Implem.Pleasanter.Models
                                         controlId: "ToDisableFilterColumns",
                                         controlCss: "button-icon",
                                         text: Displays.ToDisable(context: context),
-                                        onClick: "$p.moveColumns($(this),'Filter',false,true);",
+                                        onClick: "$p.moveColumns(event, $(this),'Filter',false,true);",
                                         icon: "ui-icon-circle-triangle-e")))
                         .FieldSelectable(
                             controlId: "FilterSourceColumns",
@@ -4993,7 +5183,7 @@ namespace Implem.Pleasanter.Models
                                         controlId: "ToEnableFilterColumns",
                                         text: Displays.ToEnable(context: context),
                                         controlCss: "button-icon",
-                                        onClick: "$p.moveColumns($(this),'Filter',false,true);",
+                                        onClick: "$p.moveColumns(event, $(this),'Filter',false,true);",
                                         icon: "ui-icon-circle-triangle-w")
                                     .FieldDropDown(
                                         context: context,
@@ -5272,13 +5462,13 @@ namespace Implem.Pleasanter.Models
                                         controlId: "MoveUpAggregations",
                                         controlCss: "button-icon",
                                         text: Displays.MoveUp(context: context),
-                                        onClick: "$p.moveColumnsById($(this),'AggregationDestination','',false,true);",
+                                        onClick: "$p.moveColumnsById(event, $(this),'AggregationDestination','',false,true);",
                                         icon: "ui-icon-circle-triangle-n")
                                     .Button(
                                         controlId: "MoveDownAggregations",
                                         controlCss: "button-icon",
                                         text: Displays.MoveDown(context: context),
-                                        onClick: "$p.moveColumnsById($(this),'AggregationDestination','',false,true);",
+                                        onClick: "$p.moveColumnsById(event, $(this),'AggregationDestination','',false,true);",
                                         icon: "ui-icon-circle-triangle-s")
                                     .Button(
                                         controlId: "OpenAggregationDetailsDialog",
@@ -5431,13 +5621,13 @@ namespace Implem.Pleasanter.Models
                                         controlId: "MoveUpEditorColumns",
                                         text: Displays.MoveUp(context: context),
                                         controlCss: "button-icon",
-                                        onClick: "$p.moveColumns($(this),'Editor');",
+                                        onClick: "$p.moveColumns(event, $(this),'Editor');",
                                         icon: "ui-icon-circle-triangle-n")
                                     .Button(
                                         controlId: "MoveDownEditorColumns",
                                         text: Displays.MoveDown(context: context),
                                         controlCss: "button-icon",
-                                        onClick: "$p.moveColumns($(this),'Editor');",
+                                        onClick: "$p.moveColumns(event, $(this),'Editor');",
                                         icon: "ui-icon-circle-triangle-s")
                                     .Button(
                                         controlId: "OpenEditorColumnDialog",
@@ -5501,7 +5691,7 @@ namespace Implem.Pleasanter.Models
                                         controlId: "ToEnableEditorColumns",
                                         text: Displays.ToEnable(context: context),
                                         controlCss: "button-icon",
-                                        onClick: "$p.enableColumns($(this),'Editor', 'EditorSourceColumnsType');",
+                                        onClick: "$p.enableColumns(event, $(this),'Editor', 'EditorSourceColumnsType');",
                                         icon: "ui-icon-circle-triangle-w",
                                         action: "SetSiteSettings",
                                         method: "post")))
@@ -6753,19 +6943,19 @@ namespace Implem.Pleasanter.Models
                                 controlId: "MoveUpTitleColumns",
                                 text: Displays.MoveUp(context: context),
                                 controlCss: "button-icon",
-                                onClick: "$p.moveColumns($(this),'Title');",
+                                onClick: "$p.moveColumns(event, $(this),'Title');",
                                 icon: "ui-icon-circle-triangle-n")
                             .Button(
                                 controlId: "MoveDownTitleColumns",
                                 text: Displays.MoveDown(context: context),
                                 controlCss: "button-icon",
-                                onClick: "$p.moveColumns($(this),'Title');",
+                                onClick: "$p.moveColumns(event, $(this),'Title');",
                                 icon: "ui-icon-circle-triangle-s")
                             .Button(
                                 controlId: "ToDisableTitleColumns",
                                 text: Displays.ToDisable(context: context),
                                 controlCss: "button-icon",
-                                onClick: "$p.moveColumns($(this),'Title');",
+                                onClick: "$p.moveColumns(event, $(this),'Title');",
                                 icon: "ui-icon-circle-triangle-e")
                             .Button(
                                 controlCss: "button-icon",
@@ -6793,7 +6983,7 @@ namespace Implem.Pleasanter.Models
                                 controlId: "ToEnableTitleColumns",
                                 text: Displays.ToEnable(context: context),
                                 controlCss: "button-icon",
-                                onClick: "$p.moveColumns($(this),'Title');",
+                                onClick: "$p.moveColumns(event, $(this),'Title');",
                                 icon: "ui-icon-circle-triangle-w")))
                 .FieldTextBox(
                     controlId: "TitleSeparator",
@@ -7124,19 +7314,19 @@ namespace Implem.Pleasanter.Models
                                         controlId: "MoveUpLinkColumns",
                                         text: Displays.MoveUp(context: context),
                                         controlCss: "button-icon",
-                                        onClick: "$p.moveColumns($(this),'Link');",
+                                        onClick: "$p.moveColumns(event, $(this),'Link');",
                                         icon: "ui-icon-circle-triangle-n")
                                     .Button(
                                         controlId: "MoveDownLinkColumns",
                                         text: Displays.MoveDown(context: context),
                                         controlCss: "button-icon",
-                                        onClick: "$p.moveColumns($(this),'Link');",
+                                        onClick: "$p.moveColumns(event, $(this),'Link');",
                                         icon: "ui-icon-circle-triangle-s")
                                     .Button(
                                         controlId: "ToDisableLinkColumns",
                                         text: Displays.ToDisable(context: context),
                                         controlCss: "button-icon",
-                                        onClick: "$p.moveColumns($(this),'Link');",
+                                        onClick: "$p.moveColumns(event, $(this),'Link');",
                                         icon: "ui-icon-circle-triangle-e")))
                         .FieldSelectable(
                             controlId: "LinkSourceColumns",
@@ -7153,7 +7343,7 @@ namespace Implem.Pleasanter.Models
                                         controlId: "ToEnableLinkColumns",
                                         text: Displays.ToEnable(context: context),
                                         controlCss: "button-icon",
-                                        onClick: "$p.moveColumns($(this),'Link');",
+                                        onClick: "$p.moveColumns(event, $(this),'Link');",
                                         icon: "ui-icon-circle-triangle-w"))))
                 .FieldDropDown(
                     context: context,
@@ -7192,19 +7382,19 @@ namespace Implem.Pleasanter.Models
                                         controlId: "MoveUpHistoryColumns",
                                         text: Displays.MoveUp(context: context),
                                         controlCss: "button-icon",
-                                        onClick: "$p.moveColumns($(this),'History');",
+                                        onClick: "$p.moveColumns(event, $(this),'History');",
                                         icon: "ui-icon-circle-triangle-n")
                                     .Button(
                                         controlId: "MoveDownHistoryColumns",
                                         text: Displays.MoveDown(context: context),
                                         controlCss: "button-icon",
-                                        onClick: "$p.moveColumns($(this),'History');",
+                                        onClick: "$p.moveColumns(event, $(this),'History');",
                                         icon: "ui-icon-circle-triangle-s")
                                     .Button(
                                         controlId: "ToDisableHistoryColumns",
                                         text: Displays.ToDisable(context: context),
                                         controlCss: "button-icon",
-                                        onClick: "$p.moveColumns($(this),'History');",
+                                        onClick: "$p.moveColumns(event, $(this),'History');",
                                         icon: "ui-icon-circle-triangle-e")))
                         .FieldSelectable(
                             controlId: "HistorySourceColumns",
@@ -7221,7 +7411,7 @@ namespace Implem.Pleasanter.Models
                                         controlId: "ToEnableHistoryColumns",
                                         text: Displays.ToEnable(context: context),
                                         controlCss: "button-icon",
-                                        onClick: "$p.moveColumns($(this),'History');",
+                                        onClick: "$p.moveColumns(event, $(this),'History');",
                                         icon: "ui-icon-circle-triangle-w"))))
                 .FieldCheckBox(
                     controlId: "AllowRestoreHistories",
@@ -7261,19 +7451,19 @@ namespace Implem.Pleasanter.Models
                                         controlId: "MoveUpMoveTargetsColumns",
                                         text: Displays.MoveUp(context: context),
                                         controlCss: "button-icon",
-                                        onClick: "$p.moveColumns($(this),'MoveTargets');",
+                                        onClick: "$p.moveColumns(event, $(this),'MoveTargets');",
                                         icon: "ui-icon-circle-triangle-n")
                                     .Button(
                                         controlId: "MoveDownMoveTargetsColumns",
                                         text: Displays.MoveDown(context: context),
                                         controlCss: "button-icon",
-                                        onClick: "$p.moveColumns($(this),'MoveTargets');",
+                                        onClick: "$p.moveColumns(event, $(this),'MoveTargets');",
                                         icon: "ui-icon-circle-triangle-s")
                                     .Button(
                                         controlId: "ToDisableMoveTargetsColumns",
                                         text: Displays.ToDisable(context: context),
                                         controlCss: "button-icon",
-                                        onClick: "$p.moveColumns($(this),'MoveTargets');",
+                                        onClick: "$p.moveColumns(event, $(this),'MoveTargets');",
                                         icon: "ui-icon-circle-triangle-e")))
                         .FieldSelectable(
                             controlId: "MoveTargetsSourceColumns",
@@ -7290,7 +7480,7 @@ namespace Implem.Pleasanter.Models
                                         controlId: "ToEnableMoveTargetsColumns",
                                         text: Displays.ToEnable(context: context),
                                         controlCss: "button-icon",
-                                        onClick: "$p.moveColumns($(this),'MoveTargets');",
+                                        onClick: "$p.moveColumns(event, $(this),'MoveTargets');",
                                         icon: "ui-icon-circle-triangle-w")))));
         }
 
@@ -7331,7 +7521,7 @@ namespace Implem.Pleasanter.Models
                         controlCss: "button-icon",
                         text: Displays.Copy(context: context),
                         onClick: "$p.setAndSend('#EditSummary', $(this));",
-                        icon: "ui-icon-trash",
+                        icon: "ui-icon-copy",
                         action: "SetSiteSettings",
                         method: "post")
                     .Button(
@@ -7782,7 +7972,7 @@ namespace Implem.Pleasanter.Models
                         controlCss: "button-icon",
                         text: Displays.Copy(context: context),
                         onClick: "$p.setAndSend('#EditFormula', $(this));",
-                        icon: "ui-icon-trash",
+                        icon: "ui-icon-copy",
                         action: "SetSiteSettings",
                         method: "post")
                     .Button(
@@ -8020,7 +8210,7 @@ namespace Implem.Pleasanter.Models
                         controlCss: "button-icon",
                         text: Displays.Copy(context: context),
                         onClick: "$p.setAndSend('#EditProcess', $(this));",
-                        icon: "ui-icon-trash",
+                        icon: "ui-icon-copy",
                         action: "SetSiteSettings",
                         method: "post")
                     .Button(
@@ -8878,7 +9068,7 @@ namespace Implem.Pleasanter.Models
                         text: Displays.Copy(context: context),
                         controlCss: "button-icon",
                         onClick: "$p.setAndSend('#EditProcessDataChange', $(this));",
-                        icon: "ui-icon-trash",
+                        icon: "ui-icon-copy",
                         action: "SetSiteSettings",
                         method: "post")
                     .Button(
@@ -9487,7 +9677,7 @@ namespace Implem.Pleasanter.Models
                         text: Displays.Copy(context: context),
                         controlCss: "button-icon",
                         onClick: "$p.setAndSend('#EditStatusControl', $(this));",
-                        icon: "ui-icon-gear",
+                        icon: "ui-icon-copy",
                         action: "SetSiteSettings",
                         method: "post")
                     .Button(
@@ -9904,13 +10094,13 @@ namespace Implem.Pleasanter.Models
                                         controlId: "MoveUpViews",
                                         text: Displays.MoveUp(context: context),
                                         controlCss: "button-icon",
-                                        onClick: "$p.moveColumnsById($(this),'Views', '');",
+                                        onClick: "$p.moveColumnsById(event, $(this),'Views', '');",
                                         icon: "ui-icon-circle-triangle-n")
                                     .Button(
                                         controlId: "MoveDownViews",
                                         text: Displays.MoveDown(context: context),
                                         controlCss: "button-icon",
-                                        onClick: "$p.moveColumnsById($(this),'Views', '');",
+                                        onClick: "$p.moveColumnsById(event, $(this),'Views', '');",
                                         icon: "ui-icon-circle-triangle-s")
                                     .Button(
                                         controlId: "NewView",
@@ -9933,7 +10123,7 @@ namespace Implem.Pleasanter.Models
                                         text: Displays.Copy(context: context),
                                         controlCss: "button-icon",
                                         onClick: "$p.send($(this));",
-                                        icon: "ui-icon-trash",
+                                        icon: "ui-icon-copy",
                                         action: "SetSiteSettings",
                                         method: "put")
                                     .Button(
@@ -10180,19 +10370,19 @@ namespace Implem.Pleasanter.Models
                                         controlId: "MoveUpViewGridColumns",
                                         controlCss: "button-icon",
                                         text: Displays.MoveUp(context: context),
-                                        onClick: "$p.moveColumns($(this),'ViewGrid',false,true);",
+                                        onClick: "$p.moveColumns(event, $(this),'ViewGrid',false,true);",
                                         icon: "ui-icon-circle-triangle-n")
                                     .Button(
                                         controlId: "MoveDownViewGridColumns",
                                         controlCss: "button-icon",
                                         text: Displays.MoveDown(context: context),
-                                        onClick: "$p.moveColumns($(this),'ViewGrid',false,true);",
+                                        onClick: "$p.moveColumns(event, $(this),'ViewGrid',false,true);",
                                         icon: "ui-icon-circle-triangle-s")
                                     .Button(
                                         controlId: "ToDisableViewGridColumns",
                                         controlCss: "button-icon",
                                         text: Displays.ToDisable(context: context),
-                                        onClick: "$p.moveColumns($(this),'ViewGrid',false,true);",
+                                        onClick: "$p.moveColumns(event, $(this),'ViewGrid',false,true);",
                                         icon: "ui-icon-circle-triangle-e")))
                         .FieldSelectable(
                             controlId: "ViewGridSourceColumns",
@@ -10211,7 +10401,7 @@ namespace Implem.Pleasanter.Models
                                         controlId: "ToEnableViewGridColumns",
                                         text: Displays.ToEnable(context: context),
                                         controlCss: "button-icon",
-                                        onClick: "$p.moveColumns($(this),'ViewGrid',false,true);",
+                                        onClick: "$p.moveColumns(event, $(this),'ViewGrid',false,true);",
                                         icon: "ui-icon-circle-triangle-w")
                                     .FieldDropDown(
                                         context: context,
@@ -10291,7 +10481,7 @@ namespace Implem.Pleasanter.Models
         /// <summary>
         /// Fixed:
         /// </summary>
-        private static HtmlBuilder ViewFiltersTab(
+        public static HtmlBuilder ViewFiltersTab(
             this HtmlBuilder hb,
             Context context,
             SiteSettings ss,
@@ -10327,19 +10517,19 @@ namespace Implem.Pleasanter.Models
                                                 controlId: "MoveUpViewFiltersFilterColumns",
                                                 controlCss: "button-icon",
                                                 text: Displays.MoveUp(context: context),
-                                                onClick: "$p.moveColumns($(this),'ViewFiltersFilter',false,true);",
+                                                onClick: "$p.moveColumns(event, $(this),'ViewFiltersFilter',false,true);",
                                                 icon: "ui-icon-circle-triangle-n")
                                             .Button(
                                                 controlId: "MoveDownViewFiltersFilterColumns",
                                                 controlCss: "button-icon",
                                                 text: Displays.MoveDown(context: context),
-                                                onClick: "$p.moveColumns($(this),'ViewFiltersFilter',false,true);",
+                                                onClick: "$p.moveColumns(event, $(this),'ViewFiltersFilter',false,true);",
                                                 icon: "ui-icon-circle-triangle-s")
                                             .Button(
                                                 controlId: "ToDisableViewFiltersFilterColumns",
                                                 controlCss: "button-icon",
                                                 text: Displays.ToDisable(context: context),
-                                                onClick: "$p.moveColumns($(this),'ViewFiltersFilter',false,true);",
+                                                onClick: "$p.moveColumns(event, $(this),'ViewFiltersFilter',false,true);",
                                                 icon: "ui-icon-circle-triangle-e")))
                                 .FieldSelectable(
                                     controlId: "ViewFiltersFilterSourceColumns",
@@ -10358,7 +10548,7 @@ namespace Implem.Pleasanter.Models
                                                 controlId: "ToEnableViewFiltersFilterColumns",
                                                 text: Displays.ToEnable(context: context),
                                                 controlCss: "button-icon",
-                                                onClick: "$p.moveColumns($(this),'ViewFiltersFilter',false,true);",
+                                                onClick: "$p.moveColumns(event, $(this),'ViewFiltersFilter',false,true);",
                                                 icon: "ui-icon-circle-triangle-w")
                                             .FieldDropDown(
                                                 context: context,
@@ -10650,18 +10840,25 @@ namespace Implem.Pleasanter.Models
         /// <summary>
         /// Fixed:
         /// </summary>
-        private static HtmlBuilder ViewSortersTab(
-            this HtmlBuilder hb, Context context, SiteSettings ss, View view)
+        public static HtmlBuilder ViewSortersTab(
+            this HtmlBuilder hb,
+            Context context,
+            SiteSettings ss,
+            View view,
+            string prefix = "",
+            bool usekeepSorterState = true,
+            bool currentTableOnly = false)
         {
-            return hb.FieldSet(id: "ViewSortersTab", action: () => hb
+            return hb.FieldSet(id: $"{prefix}ViewSortersTab", action: () => hb
                 .FieldCheckBox(
                     controlId: "KeepSorterState",
                     fieldCss: "field-auto-thin",
                     labelText: Displays.KeepSorterState(context: context),
                     _checked: view.KeepSorterState == true,
-                    labelPositionIsRight: true)
+                    labelPositionIsRight: true,
+                    _using: usekeepSorterState)
                 .FieldSet(
-                    id: "ViewFiltersSorterConditionSettingsEditor",
+                    id: $"{prefix}ViewFiltersSorterConditionSettingsEditor",
                     css: "both" + (view.KeepSorterState == true
                         ? " hidden"
                         : string.Empty),
@@ -10671,7 +10868,7 @@ namespace Implem.Pleasanter.Models
                         legendText: Displays.SortCondition(context: context),
                         action: () => hb
                 .FieldBasket(
-                    controlId: "ViewSorters",
+                    controlId: $"{prefix}ViewSorters",
                     fieldCss: "field-wide",
                     controlCss: "control-basket cf",
                     listItemCollection: view.ColumnSorterHash?.ToDictionary(
@@ -10683,13 +10880,15 @@ namespace Implem.Pleasanter.Models
                         .Text(text: Displays.Sorters(context: context)))
                 .FieldDropDown(
                     context: context,
-                    controlId: "ViewSorterSelector",
+                    controlId: $"{prefix}ViewSorterSelector",
                     fieldCss: "field-auto-thin",
                     controlCss: " always-send",
-                    optionCollection: ss.ViewSorterOptions(context: context))
+                    optionCollection: ss.ViewSorterOptions(
+                        context: context,
+                        currentTableOnly: currentTableOnly))
                 .FieldDropDown(
                     context: context,
-                    controlId: "ViewSorterOrderTypes",
+                    controlId: $"{prefix}ViewSorterOrderTypes",
                     fieldCss: "field-auto-thin",
                     controlCss: " always-send",
                     optionCollection: new Dictionary<string, string>
@@ -10698,8 +10897,9 @@ namespace Implem.Pleasanter.Models
                         { "desc", Displays.OrderDesc(context: context) }
                     })
                 .Button(
-                    controlId: "AddViewSorter",
-                    controlCss: "button-icon",
+                    controlId: $"Add{prefix}ViewSorter",
+                    controlCss: " add-view-sorter button-icon",
+                    attributes: new Dictionary<string, string>() { { "data-prefix", prefix } },
                     text: Displays.Add(context: context),
                     icon: "ui-icon-plus"))));
         }
@@ -11016,7 +11216,7 @@ namespace Implem.Pleasanter.Models
                                 labelText: Displays.MaxColumns(context: context),
                                 optionCollection: Enumerable.Range(
                                     Parameters.General.KambanMinColumns,
-                                    Parameters.General.KambanMaxColumns)
+                                    Parameters.General.KambanMaxColumns - Parameters.General.KambanMinColumns + 1)
                                         .ToDictionary(o => o.ToString(), o => o.ToString()),
                                 selectedValue: view.GetKambanColumns().ToString())
                             .FieldCheckBox(
@@ -11233,7 +11433,7 @@ namespace Implem.Pleasanter.Models
                         text: Displays.Copy(context: context),
                         controlCss: "button-icon",
                         onClick: "$p.setAndSend('#EditNotification', $(this));",
-                        icon: "ui-icon-trash",
+                        icon: "ui-icon-copy",
                         action: "SetSiteSettings",
                         method: "post")
                     .Button(
@@ -11297,6 +11497,8 @@ namespace Implem.Pleasanter.Models
                     .Th(action: () => hb
                         .Text(text: Displays.Prefix(context: context)))
                     .Th(action: () => hb
+                        .Text(text: Displays.Subject(context: context)))
+                    .Th(action: () => hb
                         .Text(text: Displays.Address(context: context)))
                     .Th(action: () => hb
                         .Text(text: Displays.Notifications(context: context)))
@@ -11352,6 +11554,8 @@ namespace Implem.Pleasanter.Models
                                 id: notification.Type.ToString())))
                         .Td(action: () => hb
                             .Text(text: notification.Prefix))
+                        .Td(action: () => hb
+                            .Text(text: ss.ColumnNameToLabelText(notification.Subject)))
                         .Td(action: () => hb
                             .Text(text: ss.ColumnNameToLabelText(notification.Address)))
                         .Td(action: () => hb
@@ -11440,6 +11644,12 @@ namespace Implem.Pleasanter.Models
                         controlCss: " always-send",
                         labelText: Displays.Prefix(context: context),
                         text: notification.Prefix)
+                    .FieldTextBox(
+                        controlId: "NotificationSubject",
+                        fieldCss: "field-wide",
+                        controlCss: " always-send",
+                        labelText: Displays.Subject(context: context),
+                        text: ss.ColumnNameToLabelText(notification.Subject))
                     .FieldTextBox(
                         controlId: "NotificationAddress",
                         fieldCss: "field-wide",
@@ -11619,19 +11829,19 @@ namespace Implem.Pleasanter.Models
                                             controlId: "MoveUpMonitorChangesColumns",
                                             text: Displays.MoveUp(context: context),
                                             controlCss: "button-icon",
-                                            onClick: "$p.moveColumns($(this),'MonitorChanges');",
+                                            onClick: "$p.moveColumns(event, $(this),'MonitorChanges');",
                                             icon: "ui-icon-circle-triangle-n")
                                         .Button(
                                             controlId: "MoveDownMonitorChangesColumns",
                                             text: Displays.MoveDown(context: context),
                                             controlCss: "button-icon",
-                                            onClick: "$p.moveColumns($(this),'MonitorChanges');",
+                                            onClick: "$p.moveColumns(event, $(this),'MonitorChanges');",
                                             icon: "ui-icon-circle-triangle-s")
                                         .Button(
                                             controlId: "ToDisableMonitorChangesColumns",
                                             text: Displays.ToDisable(context: context),
                                             controlCss: "button-icon",
-                                            onClick: "$p.moveColumns($(this),'MonitorChanges');",
+                                            onClick: "$p.moveColumns(event, $(this),'MonitorChanges');",
                                             icon: "ui-icon-circle-triangle-e")))
                             .FieldSelectable(
                                 controlId: "MonitorChangesSourceColumns",
@@ -11651,7 +11861,7 @@ namespace Implem.Pleasanter.Models
                                             controlId: "ToEnableMonitorChangesColumns",
                                             text: Displays.ToEnable(context: context),
                                             controlCss: "button-icon",
-                                            onClick: "$p.moveColumns($(this),'MonitorChanges');",
+                                            onClick: "$p.moveColumns(event, $(this),'MonitorChanges');",
                                             icon: "ui-icon-circle-triangle-w"))))
                     .P(css: "message-dialog")
                     .Div(css: "command-center", action: () => hb
@@ -11718,7 +11928,7 @@ namespace Implem.Pleasanter.Models
                         text: Displays.Copy(context: context),
                         controlCss: "button-icon",
                         onClick: "$p.setAndSend('#EditReminder', $(this));",
-                        icon: "ui-icon-trash",
+                        icon: "ui-icon-copy",
                         action: "SetSiteSettings",
                         method: "delete")
                     .Button(
@@ -12183,7 +12393,7 @@ namespace Implem.Pleasanter.Models
                         text: Displays.Copy(context: context),
                         controlCss: "button-icon",
                         onClick: "$p.setAndSend('#EditExport', $(this));",
-                        icon: "ui-icon-gear",
+                        icon: "ui-icon-copy",
                         action: "SetSiteSettings",
                         method: "put")
                     .Button(
@@ -12561,13 +12771,13 @@ namespace Implem.Pleasanter.Models
                                             controlId: "MoveUpExportColumns",
                                             text: Displays.MoveUp(context: context),
                                             controlCss: "button-icon",
-                                            onClick: "$p.moveColumns($(this),'Export',true);",
+                                            onClick: "$p.moveColumns(event, $(this),'Export',true);",
                                             icon: "ui-icon-circle-triangle-n")
                                         .Button(
                                             controlId: "MoveDownExportColumns",
                                             text: Displays.MoveDown(context: context),
                                             controlCss: "button-icon",
-                                            onClick: "$p.moveColumns($(this),'Export',true);",
+                                            onClick: "$p.moveColumns(event, $(this),'Export',true);",
                                             icon: "ui-icon-circle-triangle-s")
                                         .Button(
                                             controlId: "OpenExportColumnsDialog",
@@ -12581,7 +12791,7 @@ namespace Implem.Pleasanter.Models
                                             controlId: "ToDisableExportColumns",
                                             text: Displays.ToDisable(context: context),
                                             controlCss: "button-icon",
-                                            onClick: "$p.moveColumns($(this),'Export',true);",
+                                            onClick: "$p.moveColumns(event, $(this),'Export',true);",
                                             icon: "ui-icon-circle-triangle-e")))
                             .FieldSelectable(
                                 controlId: "ExportSourceColumns",
@@ -12598,7 +12808,7 @@ namespace Implem.Pleasanter.Models
                                             controlId: "ToEnableExportColumns",
                                             text: Displays.ToEnable(context: context),
                                             controlCss: "button-icon",
-                                            onClick: "$p.moveColumns($(this),'Export',true);",
+                                            onClick: "$p.moveColumns(event, $(this),'Export',true);",
                                             icon: "ui-icon-circle-triangle-w")
                                     .FieldDropDown(
                                         context: context,
@@ -13018,7 +13228,7 @@ namespace Implem.Pleasanter.Models
                         text: Displays.Copy(context: context),
                         controlCss: "button-icon",
                         onClick: "$p.setAndSend('#EditStyle', $(this));",
-                        icon: "ui-icon-trash",
+                        icon: "ui-icon-copy",
                         action: "SetSiteSettings",
                         method: "post")
                     .Button(
@@ -13083,27 +13293,41 @@ namespace Implem.Pleasanter.Models
                     .Th(action: () => hb
                         .Text(text: Displays.Title(context: context)))
                     .Th(action: () => hb
-                        .Text(text: Displays.All(context: context)))
-                    .Th(action: () => hb
-                        .Text(text: Displays.New(context: context)))
-                    .Th(action: () => hb
-                        .Text(text: Displays.Edit(context: context)))
-                    .Th(action: () => hb
-                        .Text(text: Displays.Index(context: context)))
-                    .Th(action: () => hb
-                        .Text(text: Displays.Calendar(context: context)))
-                    .Th(action: () => hb
-                        .Text(text: Displays.Crosstab(context: context)))
-                    .Th(action: () => hb
-                        .Text(text: Displays.Gantt(context: context)))
-                    .Th(action: () => hb
-                        .Text(text: Displays.BurnDown(context: context)))
-                    .Th(action: () => hb
-                        .Text(text: Displays.TimeSeries(context: context)))
-                    .Th(action: () => hb
-                        .Text(text: Displays.Kamban(context: context)))
-                    .Th(action: () => hb
-                        .Text(text: Displays.ImageLib(context: context)))));
+                        .Text(text: Displays.Disabled(context: context)))
+                    .EditDestinationStyleHeader(
+                        context: context,
+                        _using: ss.ReferenceType != "Dashboards")));
+        }
+
+        /// <summary>
+        /// Fixed:
+        /// </summary>
+        private static HtmlBuilder EditDestinationStyleHeader(this HtmlBuilder hb, Context context, bool _using)
+        {
+            if (!_using) return hb;
+            return hb
+                .Th(action: () => hb
+                    .Text(text: Displays.All(context: context)))
+                .Th(action: () => hb
+                    .Text(text: Displays.New(context: context)))
+                .Th(action: () => hb
+                    .Text(text: Displays.Edit(context: context)))
+                .Th(action: () => hb
+                    .Text(text: Displays.Index(context: context)))
+                .Th(action: () => hb
+                    .Text(text: Displays.Calendar(context: context)))
+                .Th(action: () => hb
+                    .Text(text: Displays.Crosstab(context: context)))
+                .Th(action: () => hb
+                    .Text(text: Displays.Gantt(context: context)))
+                .Th(action: () => hb
+                    .Text(text: Displays.BurnDown(context: context)))
+                .Th(action: () => hb
+                    .Text(text: Displays.TimeSeries(context: context)))
+                .Th(action: () => hb
+                    .Text(text: Displays.Kamban(context: context)))
+                .Th(action: () => hb
+                    .Text(text: Displays.ImageLib(context: context)));
         }
 
         /// <summary>
@@ -13131,47 +13355,63 @@ namespace Implem.Pleasanter.Models
                             .Td(action: () => hb
                                 .Span(
                                     css: "ui-icon ui-icon-circle-check",
-                                    _using: style.All == true))
-                            .Td(action: () => hb
-                                .Span(
-                                    css: "ui-icon ui-icon-circle-check",
-                                    _using: style.New == true))
-                            .Td(action: () => hb
-                                .Span(
-                                    css: "ui-icon ui-icon-circle-check",
-                                    _using: style.Edit == true))
-                            .Td(action: () => hb
-                                .Span(
-                                    css: "ui-icon ui-icon-circle-check",
-                                    _using: style.Index == true))
-                            .Td(action: () => hb
-                                .Span(
-                                    css: "ui-icon ui-icon-circle-check",
-                                    _using: style.Calendar == true))
-                            .Td(action: () => hb
-                                .Span(
-                                    css: "ui-icon ui-icon-circle-check",
-                                    _using: style.Crosstab == true))
-                            .Td(action: () => hb
-                                .Span(
-                                    css: "ui-icon ui-icon-circle-check",
-                                    _using: style.Gantt == true))
-                            .Td(action: () => hb
-                                .Span(
-                                    css: "ui-icon ui-icon-circle-check",
-                                    _using: style.BurnDown == true))
-                            .Td(action: () => hb
-                                .Span(
-                                    css: "ui-icon ui-icon-circle-check",
-                                    _using: style.TimeSeries == true))
-                            .Td(action: () => hb
-                                .Span(
-                                    css: "ui-icon ui-icon-circle-check",
-                                    _using: style.Kamban == true))
-                            .Td(action: () => hb
-                                .Span(
-                                    css: "ui-icon ui-icon-circle-check",
-                                    _using: style.ImageLib == true)))));
+                                    _using: style.Disabled == true))
+                            .EditDestinationStyleBody(
+                                style: style,
+                                _using: ss.ReferenceType != "Dashboards"))));
+        }
+
+        /// <summary>
+        /// Fixed:
+        /// </summary>
+        private static HtmlBuilder EditDestinationStyleBody(this HtmlBuilder hb, Style style, bool _using)
+        {
+            if (!_using) return hb;
+            return hb
+                .Td(action: () => hb
+                    .Span(
+                        css: "ui-icon ui-icon-circle-check",
+                        _using: style.All == true))
+                .Td(action: () => hb
+                    .Span(
+                        css: "ui-icon ui-icon-circle-check",
+                        _using: style.New == true))
+                .Td(action: () => hb
+                    .Span(
+                        css: "ui-icon ui-icon-circle-check",
+                        _using: style.Edit == true))
+                .Td(action: () => hb
+                    .Span(
+                        css: "ui-icon ui-icon-circle-check",
+                        _using: style.Index == true))
+                .Td(action: () => hb
+                    .Span(
+                        css: "ui-icon ui-icon-circle-check",
+                        _using: style.Calendar == true))
+                .Td(action: () => hb
+                    .Span(
+                        css: "ui-icon ui-icon-circle-check",
+                        _using: style.Crosstab == true))
+                .Td(action: () => hb
+                    .Span(
+                        css: "ui-icon ui-icon-circle-check",
+                        _using: style.Gantt == true))
+                .Td(action: () => hb
+                    .Span(
+                        css: "ui-icon ui-icon-circle-check",
+                        _using: style.BurnDown == true))
+                .Td(action: () => hb
+                    .Span(
+                        css: "ui-icon ui-icon-circle-check",
+                        _using: style.TimeSeries == true))
+                .Td(action: () => hb
+                    .Span(
+                        css: "ui-icon ui-icon-circle-check",
+                        _using: style.Kamban == true))
+                .Td(action: () => hb
+                    .Span(
+                        css: "ui-icon ui-icon-circle-check",
+                        _using: style.ImageLib == true));
         }
 
         /// <summary>
@@ -13217,6 +13457,12 @@ namespace Implem.Pleasanter.Models
                         controlCss: " always-send",
                         labelText: Displays.Style(context: context),
                         text: style.Body)
+                    .FieldCheckBox(
+                        fieldId: "StyleDisabled",
+                        controlId: "StyleDisabled",
+                        controlCss: " always-send",
+                        labelText: Displays.Disabled(context: context),
+                        _checked: style.Disabled == true)
                     .FieldSet(
                         css: enclosedCss,
                         legendText: Displays.OutputDestination(context: context),
@@ -13286,7 +13532,13 @@ namespace Implem.Pleasanter.Models
                                 fieldCss: outputDestinationCss,
                                 controlCss: " always-send",
                                 labelText: Displays.ImageLib(context: context),
-                                _checked: style.ImageLib == true))
+                                _checked: style.ImageLib == true),
+                        _using: ss.ReferenceType != "Dashboards")
+                    .Hidden(
+                        controlId: "StyleAll",
+                        css: " always-send",
+                        value: "1",
+                        _using: ss.ReferenceType == "Dashboards")
                     .P(css: "message-dialog")
                     .Div(css: "command-center", action: () => hb
                         .Button(
@@ -13352,7 +13604,7 @@ namespace Implem.Pleasanter.Models
                         text: Displays.Copy(context: context),
                         controlCss: "button-icon",
                         onClick: "$p.setAndSend('#EditScript', $(this));",
-                        icon: "ui-icon-trash",
+                        icon: "ui-icon-copy",
                         action: "SetSiteSettings",
                         method: "post")
                     .Button(
@@ -13372,7 +13624,8 @@ namespace Implem.Pleasanter.Models
         /// <summary>
         /// Fixed:
         /// </summary>
-        public static HtmlBuilder EditScript(this HtmlBuilder hb, Context context, SiteSettings ss)
+        public static HtmlBuilder EditScript(
+            this HtmlBuilder hb, Context context, SiteSettings ss)
         {
             var selected = context.Forms.Data("EditScript").Deserialize<IEnumerable<int>>();
             return hb.Table(
@@ -13411,27 +13664,41 @@ namespace Implem.Pleasanter.Models
                     .Th(action: () => hb
                         .Text(text: Displays.Title(context: context)))
                     .Th(action: () => hb
-                        .Text(text: Displays.All(context: context)))
-                    .Th(action: () => hb
-                        .Text(text: Displays.New(context: context)))
-                    .Th(action: () => hb
-                        .Text(text: Displays.Edit(context: context)))
-                    .Th(action: () => hb
-                        .Text(text: Displays.Index(context: context)))
-                    .Th(action: () => hb
-                        .Text(text: Displays.Calendar(context: context)))
-                    .Th(action: () => hb
-                        .Text(text: Displays.Crosstab(context: context)))
-                    .Th(action: () => hb
-                        .Text(text: Displays.Gantt(context: context)))
-                    .Th(action: () => hb
-                        .Text(text: Displays.BurnDown(context: context)))
-                    .Th(action: () => hb
-                        .Text(text: Displays.TimeSeries(context: context)))
-                    .Th(action: () => hb
-                        .Text(text: Displays.Kamban(context: context)))
-                    .Th(action: () => hb
-                        .Text(text: Displays.ImageLib(context: context)))));
+                        .Text(text: Displays.Disabled(context: context)))
+                    .EditDestinationScriptHeader(
+                        context:context,
+                        _using: ss.ReferenceType != "Dashboards")));
+        }
+
+        /// <summary>
+        /// Fixed:
+        /// </summary>
+        private static HtmlBuilder EditDestinationScriptHeader(this HtmlBuilder hb, Context context, bool _using)
+        {
+            if (!_using) return hb;
+            return hb
+                .Th(action: () => hb
+                    .Text(text: Displays.All(context: context)))
+                .Th(action: () => hb
+                    .Text(text: Displays.New(context: context)))
+                .Th(action: () => hb
+                    .Text(text: Displays.Edit(context: context)))
+                .Th(action: () => hb
+                    .Text(text: Displays.Index(context: context)))
+                .Th(action: () => hb
+                    .Text(text: Displays.Calendar(context: context)))
+                .Th(action: () => hb
+                    .Text(text: Displays.Crosstab(context: context)))
+                .Th(action: () => hb
+                    .Text(text: Displays.Gantt(context: context)))
+                .Th(action: () => hb
+                    .Text(text: Displays.BurnDown(context: context)))
+                .Th(action: () => hb
+                    .Text(text: Displays.TimeSeries(context: context)))
+                .Th(action: () => hb
+                    .Text(text: Displays.Kamban(context: context)))
+                .Th(action: () => hb
+                    .Text(text: Displays.ImageLib(context: context)));
         }
 
         /// <summary>
@@ -13459,47 +13726,63 @@ namespace Implem.Pleasanter.Models
                             .Td(action: () => hb
                                 .Span(
                                     css: "ui-icon ui-icon-circle-check",
-                                    _using: script.All == true))
-                            .Td(action: () => hb
-                                .Span(
-                                    css: "ui-icon ui-icon-circle-check",
-                                    _using: script.New == true))
-                            .Td(action: () => hb
-                                .Span(
-                                    css: "ui-icon ui-icon-circle-check",
-                                    _using: script.Edit == true))
-                            .Td(action: () => hb
-                                .Span(
-                                    css: "ui-icon ui-icon-circle-check",
-                                    _using: script.Index == true))
-                            .Td(action: () => hb
-                                .Span(
-                                    css: "ui-icon ui-icon-circle-check",
-                                    _using: script.Calendar == true))
-                            .Td(action: () => hb
-                                .Span(
-                                    css: "ui-icon ui-icon-circle-check",
-                                    _using: script.Crosstab == true))
-                            .Td(action: () => hb
-                                .Span(
-                                    css: "ui-icon ui-icon-circle-check",
-                                    _using: script.Gantt == true))
-                            .Td(action: () => hb
-                                .Span(
-                                    css: "ui-icon ui-icon-circle-check",
-                                    _using: script.BurnDown == true))
-                            .Td(action: () => hb
-                                .Span(
-                                    css: "ui-icon ui-icon-circle-check",
-                                    _using: script.TimeSeries == true))
-                            .Td(action: () => hb
-                                .Span(
-                                    css: "ui-icon ui-icon-circle-check",
-                                    _using: script.Kamban == true))
-                            .Td(action: () => hb
-                                .Span(
-                                    css: "ui-icon ui-icon-circle-check",
-                                    _using: script.ImageLib == true)))));
+                                    _using: script.Disabled == true))
+                            .EditDestinationScriptBody(
+                                script: script,
+                                _using: ss.ReferenceType != "Dashboards"))));
+        }
+
+        /// <summary>
+        /// Fixed:
+        /// </summary>
+        private static HtmlBuilder EditDestinationScriptBody(this HtmlBuilder hb, Script script, bool _using)
+        {
+            if (!_using) return hb;
+            return hb
+                .Td(action: () => hb
+                    .Span(
+                        css: "ui-icon ui-icon-circle-check",
+                        _using: script.All == true))
+                .Td(action: () => hb
+                    .Span(
+                        css: "ui-icon ui-icon-circle-check",
+                        _using: script.New == true))
+                .Td(action: () => hb
+                    .Span(
+                        css: "ui-icon ui-icon-circle-check",
+                        _using: script.Edit == true))
+                .Td(action: () => hb
+                    .Span(
+                        css: "ui-icon ui-icon-circle-check",
+                        _using: script.Index == true))
+                .Td(action: () => hb
+                    .Span(
+                        css: "ui-icon ui-icon-circle-check",
+                        _using: script.Calendar == true))
+                .Td(action: () => hb
+                    .Span(
+                        css: "ui-icon ui-icon-circle-check",
+                        _using: script.Crosstab == true))
+                .Td(action: () => hb
+                    .Span(
+                        css: "ui-icon ui-icon-circle-check",
+                        _using: script.Gantt == true))
+                .Td(action: () => hb
+                    .Span(
+                        css: "ui-icon ui-icon-circle-check",
+                        _using: script.BurnDown == true))
+                .Td(action: () => hb
+                    .Span(
+                        css: "ui-icon ui-icon-circle-check",
+                        _using: script.TimeSeries == true))
+                .Td(action: () => hb
+                    .Span(
+                        css: "ui-icon ui-icon-circle-check",
+                        _using: script.Kamban == true))
+                .Td(action: () => hb
+                    .Span(
+                        css: "ui-icon ui-icon-circle-check",
+                        _using: script.ImageLib == true));
         }
 
         /// <summary>
@@ -13545,6 +13828,12 @@ namespace Implem.Pleasanter.Models
                         controlCss: " always-send",
                         labelText: Displays.Script(context: context),
                         text: script.Body)
+                    .FieldCheckBox(
+                        fieldId: "ScriptDisabled",
+                        controlId: "ScriptDisabled",
+                        controlCss: " always-send",
+                        labelText: Displays.Disabled(context: context),
+                        _checked: script.Disabled == true)
                     .FieldSet(
                         css: enclosedCss,
                         legendText: Displays.OutputDestination(context: context),
@@ -13614,7 +13903,13 @@ namespace Implem.Pleasanter.Models
                                 fieldCss: outputDestinationCss,
                                 controlCss: " always-send",
                                 labelText: Displays.ImageLib(context: context),
-                                _checked: script.ImageLib == true))
+                                _checked: script.ImageLib == true),
+                        _using: ss.ReferenceType != "Dashboards")
+                    .Hidden(
+                        controlId: "ScriptAll",
+                        css: " always-send",
+                        value: "1",
+                        _using: ss.ReferenceType == "Dashboards")
                     .P(css: "message-dialog")
                     .Div(css: "command-center", action: () => hb
                         .Button(
@@ -13681,7 +13976,7 @@ namespace Implem.Pleasanter.Models
                         text: Displays.Copy(context: context),
                         controlCss: "button-icon",
                         onClick: "$p.setAndSend('#EditServerScript', $(this));",
-                        icon: "ui-icon-trash",
+                        icon: "ui-icon-copy",
                         action: "SetSiteSettings",
                         method: "post")
                     .Button(
@@ -14241,6 +14536,640 @@ namespace Implem.Pleasanter.Models
         /// <summary>
         /// Fixed:
         /// </summary>
+        private static HtmlBuilder DashboardPartSettingsEditor(
+            this HtmlBuilder hb, Context context, SiteSettings ss)
+        {
+            if (context.ContractSettings.Script == false) return hb;
+            return hb.FieldSet(id: "DashboardPartSettingsEditor", action: () => hb
+                .Div(css: "command-left", action: () => hb
+                    .Button(
+                        controlId: "MoveUpDashboardParts",
+                        controlCss: "button-icon",
+                        text: Displays.MoveUp(context: context),
+                        onClick: "$p.setAndSend('#EditDashboardPart', $(this));",
+                        icon: "ui-icon-circle-triangle-n",
+                        action: "SetSiteSettings",
+                        method: "post")
+                    .Button(
+                        controlId: "MoveDownDashboardParts",
+                        controlCss: "button-icon",
+                        text: Displays.MoveDown(context: context),
+                        onClick: "$p.setAndSend('#EditDashboardPart', $(this));",
+                        icon: "ui-icon-circle-triangle-s",
+                        action: "SetSiteSettings",
+                        method: "post")
+                    .Button(
+                        controlId: "NewDashboardPart",
+                        text: Displays.New(context: context),
+                        controlCss: "button-icon",
+                        onClick: "$p.openDashboardPartDialog($(this));",
+                        icon: "ui-icon-gear",
+                        action: "SetSiteSettings",
+                        method: "put")
+                    .Button(
+                        controlId: "CopyDashboardParts",
+                        text: Displays.Copy(context: context),
+                        controlCss: "button-icon",
+                        onClick: "$p.setAndSend('#EditDashboardPart', $(this));",
+                        icon: "ui-icon-trash",
+                        action: "SetSiteSettings",
+                        method: "post")
+                    .Button(
+                        controlId: "DeleteDashboardParts",
+                        text: Displays.Delete(context: context),
+                        controlCss: "button-icon",
+                        onClick: "$p.setAndSend('#EditDashboardPart', $(this));",
+                        icon: "ui-icon-trash",
+                        action: "SetSiteSettings",
+                        method: "delete",
+                        confirm: Displays.ConfirmDelete(context: context)))
+                .EditDashboardPart(
+                    context: context,
+                    ss: ss));
+        }
+
+        /// <summary>
+        /// Fixed:
+        /// </summary>
+        public static HtmlBuilder EditDashboardPart(
+            this HtmlBuilder hb, Context context, SiteSettings ss)
+        {
+            var selected = context.Forms.Data("EditDashboardPart").Deserialize<IEnumerable<int>>();
+            return hb.Table(
+                id: "EditDashboardPart",
+                css: "grid",
+                attributes: new HtmlAttributes()
+                    .DataName("DashboardPartId")
+                    .DataFunc("openDashboardPartDialog")
+                    .DataAction("SetSiteSettings")
+                    .DataMethod("post"),
+                action: () => hb
+                    .EditDashboardPartHeader(
+                        context: context,
+                        ss: ss,
+                        selected: selected)
+                    .EditDashboardPartBody(
+                        context: context,
+                        ss: ss,
+                        selected: selected));
+        }
+
+        /// <summary>
+        /// Fixed:
+        /// </summary>
+        private static HtmlBuilder EditDashboardPartHeader(
+            this HtmlBuilder hb, Context context, SiteSettings ss, IEnumerable<int> selected)
+        {
+            return hb.THead(action: () => hb
+                .Tr(css: "ui-widget-header", action: () => hb
+                    .Th(action: () => hb
+                        .CheckBox(
+                            controlCss: "select-all",
+                            _checked: ss.Scripts?.All(o =>
+                                selected?.Contains(o.Id) == true) == true))
+                    .Th(action: () => hb
+                        .Text(text: Displays.Id(context: context)))
+                    .Th(action: () => hb
+                        .Text(text: Displays.Title(context: context)))
+                    .Th(action: () => hb
+                        .Text(text: Displays.PartsType(context: context)))
+                    .Th(action: () => hb
+                        .Text(text: "X"))
+                    .Th(action: () => hb
+                        .Text(text: "Y"))
+                    .Th(action: () => hb
+                        .Text(text: Displays.Width(context: context)))
+                    .Th(action: () => hb
+                        .Text(text: Displays.Height(context: context)))));
+        }
+
+        /// <summary>
+        /// Fixed:
+        /// </summary>
+        public static HtmlBuilder EditDashboardPartBody(
+            this HtmlBuilder hb, Context context, SiteSettings ss, IEnumerable<int> selected)
+        {
+            return hb.TBody(action: () => ss
+                .DashboardParts?.ForEach(dashboardPart => hb
+                    .Tr(
+                        css: "grid-row",
+                        attributes: new HtmlAttributes()
+                            .DataId(dashboardPart.Id.ToString()),
+                        action: () => hb
+                            .Td(action: () => hb
+                                .CheckBox(
+                                    controlCss: "select",
+                                    _checked: selected?
+                                        .Contains(dashboardPart.Id) == true))
+                            .Td(action: () => hb
+                                .Text(text: dashboardPart.Id.ToString()))
+                            .Td(action: () => hb
+                                .Text(text: dashboardPart.Title))
+                            .Td(action: () => hb
+                                .Text(text: dashboardPart.PartTypeString(context: context)))
+                            .Td(action: () => hb
+                                .Text(text: dashboardPart.X.ToString()))
+                            .Td(action: () => hb
+                                .Text(text: dashboardPart.Y.ToString()))
+                            .Td(action: () => hb
+                                .Text(text: dashboardPart.Width.ToString()))
+                            .Td(action: () => hb
+                                .Text(text: dashboardPart.Height.ToString())))));
+        }
+
+        /// <summary>
+        /// Fixed:
+        /// </summary>
+        public static HtmlBuilder DashboardPartTimeLineSitesDialog(
+            Context context,
+            SiteSettings ss,
+            int dashboardPartId,
+            string dashboardTimeLineSites)
+        {
+            var hb = new HtmlBuilder();
+            return hb.Form(
+                attributes: new HtmlAttributes()
+                    .Id("DashboardPartTimeLineSitesEditForm")
+                    .Action(Locations.ItemAction(
+                        context: context,
+                        id: ss.SiteId)),
+                action: () => hb
+                    .FieldTextBox(
+                        controlId: "DashboardPartTimeLineSitesEdit",
+                        fieldCss: "field-wide",
+                        controlCss: " always-send",
+                        labelText: Displays.SiteId(context: context),
+                        text: dashboardTimeLineSites,
+                        validateRequired: true)
+                    .Hidden(
+                        controlId: "DashboardPartId",
+                        alwaysSend: true,
+                        value: dashboardPartId.ToString())
+                    .Hidden(
+                        controlId: "SavedDashboardPartTimeLineSites",
+                        alwaysSend: true,
+                        value: dashboardTimeLineSites)
+                    .Hidden(
+                        controlId: "ClearDashboardView",
+                        action: "SetSiteSettings",
+                        method: "post")
+                    .P(
+                        id: "DashboardPartTimeLineSitesMessage",
+                        css: "message-dialog")
+                    .Div(css: "command-center", action: () => hb
+                        .Button(
+                            controlId: "UpdateDashboardPartTimeLineSites",
+                            text: Displays.OK(context: context),
+                            controlCss: "button-icon validate",
+                            icon: "ui-icon-pencil",
+                            onClick: "$p.updateDashboardPartTimeLineSites($(this));",
+                            action: "SetSiteSettings",
+                            method: "post")));
+        }
+
+        /// <summary>
+        /// Fixed:
+        /// </summary>
+        public static HtmlBuilder DashboardPartDialog(
+            Context context,
+            SiteSettings ss,
+            string controlId,
+            DashboardPart dashboardPart)
+        {
+            var filterVisible = dashboardPart.Type == DashboardPartType.TimeLine;
+            var hb = new HtmlBuilder();
+            return hb.Form(
+                attributes: new HtmlAttributes()
+                    .Id("DashboardPartForm")
+                    .Action(Locations.ItemAction(
+                        context: context,
+                        id: ss.SiteId)),
+                action: () => hb
+                    .Div(
+                        id: "ViewTabsContainer",
+                        css: "tab-container",
+                        action: () => hb.Ul(
+                            id: "ViewTabs",
+                            action: () => hb
+                                .Li(
+                                    id: "DashboardPartGeneralTabControl",
+                                    action: () => hb
+                                    .A(
+                                        href: "#DashboardPartGeneralTabContainer",
+                                        text: Displays.General(context: context)))
+                                .Li(
+                                    id: "DashboardPartViewFiltersTabControl",
+                                    css: filterVisible ? "" : "hidden",
+                                    action: () => hb
+                                        .A(
+                                            href: "#DashboardPartViewFiltersTabContainer",
+                                            text: Displays.Filters(context: context)))
+                                .Li(
+                                    id: "DashboardPartViewSortersTabControl",
+                                    css: filterVisible ? "" : "hidden",
+                                    action: () => hb
+                                        .A(
+                                            href: "#DashboardPartViewSortersTabContainer",
+                                            text: Displays.Sorters(context: context)))
+                                .Li(action: () => hb
+                                    .A(
+                                        href: "#DashboardPartAccessControlsTab",
+                                        text: Displays.AccessControls(context: context))))
+                        .DashboardPartGeneralTab(
+                            context: context,
+                            ss: ss,
+                            dashboardPart: dashboardPart,
+                            controlId: controlId)
+                        .DashboardPartViewFiltersTab(
+                            context: context,
+                            dashboardPart: dashboardPart)
+                        .DashboardPartViewSortersTab(
+                            context: context,
+                            dashboardPart: dashboardPart)
+                        .DashboardPartAccessControlsTab(
+                            context: context,
+                            ss: ss,
+                            dashboardPart: dashboardPart))
+                    .P(css: "message-dialog")
+                    .Div(css: "command-center", action: () => hb
+                        .Button(
+                            controlId: "AddDashboardPart",
+                            text: Displays.Add(context: context),
+                            controlCss: "button-icon validate",
+                            icon: "ui-icon-disk",
+                            onClick: "$p.setDashboardPart($(this));",
+                            action: "SetSiteSettings",
+                            method: "post",
+                            _using: controlId == "NewDashboardPart")
+                        .Button(
+                            controlId: "UpdateDashboardPart",
+                            text: Displays.Change(context: context),
+                            controlCss: "button-icon validate",
+                            onClick: "$p.setDashboardPart($(this));",
+                            icon: "ui-icon-disk",
+                            action: "SetSiteSettings",
+                            method: "post",
+                            _using: controlId == "EditDashboardPart")
+                        .Button(
+                            text: Displays.Cancel(context: context),
+                            controlCss: "button-icon",
+                            onClick: "$p.closeDialog($(this));",
+                            icon: "ui-icon-cancel")));
+        }
+
+        /// <summary>
+        /// Fixed:
+        /// </summary>
+        private static HtmlBuilder DashboardPartGeneralTab(
+            this HtmlBuilder hb,
+            Context context,
+            SiteSettings ss,
+            string controlId,
+            DashboardPart dashboardPart)
+        {
+            string hiddenCss(bool hide) => hide ? " hidden" : "";
+            return hb
+                .FieldSet(id: $"DashboardPartGeneralTabContainer", action: () => hb
+                    .FieldText(
+                        controlId: "DashboardPartId",
+                        controlCss: " always-send",
+                        labelText: Displays.Id(context: context),
+                        text: dashboardPart.Id.ToString(),
+                        _using: controlId == "EditDashboardPart")
+                    .FieldTextBox(
+                        controlId: "DashboardPartTitle",
+                        fieldCss: "field-wide",
+                        controlCss: " always-send",
+                        labelText: Displays.Title(context: context),
+                        text: dashboardPart.Title,
+                        validateRequired: true)
+                    .FieldCheckBox(
+                        controlId: "DashboardPartShowTitle",
+                        fieldCss: "field-wide",
+                        controlContainerCss: "m-l50",
+                        controlCss: " always-send",
+                        labelText: Displays.DisplayTitle(context: context),
+                        _checked: dashboardPart.ShowTitle ?? false)
+                    .FieldDropDown(
+                        context: context,
+                        controlId: "DashboardPartType",
+                        controlCss: " always-send",
+                        labelText: Displays.PartsType(context: context),
+                        optionCollection: new Dictionary<string, string>
+                        {
+                            {
+                                DashboardPartType.QuickAccess.ToInt().ToString(),
+                                Displays.QuickAccess(context: context)
+                            },
+                            {
+                                DashboardPartType.TimeLine.ToInt().ToString(),
+                                Displays.TimeLine(context: context)
+                            },
+                            {
+                                DashboardPartType.Custom.ToInt().ToString(),
+                                Displays.DashboardCustom(context: context)
+                            },
+                            {
+                                DashboardPartType.CustomHtml.ToInt().ToString(),
+                                Displays.DashboardCustomHtml(context: context)
+                            },
+                        },
+                        selectedValue: dashboardPart.Type.ToInt().ToString(),
+                        insertBlank: false)
+                    .FieldTextBox(
+                            controlId: "DashboardPartQuickAccessSites",
+                            fieldId: "DashboardPartQuickAccessSitesField",
+                            textType: HtmlTypes.TextTypes.MultiLine,
+                            fieldCss: "field-wide"
+                                + hiddenCss(dashboardPart.Type != DashboardPartType.QuickAccess),
+                            controlCss: " always-send",
+                            labelText: Displays.SiteId(context: context),
+                            text: dashboardPart.QuickAccessSites)
+                    .FieldDropDown(
+                        context: context,
+                        controlId: "DashboardPartQuickAccessLayout",
+                        fieldId: "DashboardPartQuickAccessLayoutField",
+                        controlCss: " always-send",
+                        fieldCss: hiddenCss(dashboardPart.Type != DashboardPartType.QuickAccess),
+                        labelText: Displays.QuickAccessLayout(context: context),
+                        optionCollection: new Dictionary<string, string>
+                        {
+                            {
+                                QuickAccessLayout.Horizontal.ToInt().ToString(),
+                                Displays.Horizontal(context: context)
+                            },
+                            {
+                                QuickAccessLayout.Vertical.ToInt().ToString(),
+                                Displays.Vertical(context: context)
+                            }
+                        },
+                        selectedValue: dashboardPart.QuickAccessLayout.ToInt().ToString(),
+                        insertBlank: false)
+                    .Div(
+                        id: "DashboardPartTimeLineSitesField",
+                        css: "both" + hiddenCss(dashboardPart.Type != DashboardPartType.TimeLine),
+                        action: () =>
+                        {
+                            var timeLineSites = dashboardPart.TimeLineSites;
+                            var baseSiteId = DashboardPart.GetBaseSiteSettings(
+                                context: context,
+                                timeLineSitesString: timeLineSites)
+                                    ?.SiteId;
+                            hb
+                                .FieldText(
+                                    controlId: "DashboardPartTimeLineSitesValue",
+                                    labelText: Displays.SiteId(context: context),
+                                    text: timeLineSites)
+                                .Hidden(
+                                    controlId: "DashboardPartTimeLineSites",
+                                    alwaysSend: true,
+                                    value: timeLineSites)
+                                .Hidden(
+                                    controlId: "DashboardPartBaseSiteId",
+                                    alwaysSend: true,
+                                    value: baseSiteId == null
+                                        ? null
+                                        : baseSiteId.ToString())
+                                .Button(
+                                        controlId: "EditTimeLineSites",
+                                        text: Displays.Edit(context: context),
+                                        controlCss: "button-icon",
+                                        onClick: "$p.openDashboardPartTimeLineSitesDialog($(this));",
+                                        icon: "ui-icon-pencil",
+                                        action: "SetSiteSettings",
+                                        method: "post");
+                        })
+                    .FieldTextBox(
+                        controlId: "DashboardPartTimeLineTitle",
+                        fieldId: "DashboardPartTimeLineTitleField",
+                        fieldCss: "field-wide" + hiddenCss(dashboardPart.Type != DashboardPartType.TimeLine),
+                        controlCss: " always-send",
+                        labelText: Displays.RecordTitle(context: context),
+                        text: dashboardPart.TimeLineTitle.IsNullOrEmpty()
+                            ? $"[Title]"
+                            : SiteSettingsUtilities.Get(context: context, dashboardPart.SiteId)?
+                                .ColumnNameToLabelText(dashboardPart.TimeLineTitle))
+                    .FieldTextBox(
+                        textType: HtmlTypes.TextTypes.MultiLine,
+                        controlId: "DashboardPartTimeLineBody",
+                        fieldId: "DashboardPartTimeLineBodyField",
+                        fieldCss: "field-wide" + hiddenCss(dashboardPart.Type != DashboardPartType.TimeLine),
+                        controlCss: " always-send",
+                        labelText: Displays.RecordBody(context: context),
+                        text: dashboardPart.TimeLineBody.IsNullOrEmpty()
+                            ? $"[Body]"
+                            : SiteSettingsUtilities.Get(context: context, dashboardPart.SiteId)?
+                                .ColumnNameToLabelText(dashboardPart.TimeLineBody))
+                    .FieldDropDown(
+                        context: context,
+                        controlId: "DashboardPartTimeLineDisplayType",
+                        fieldId: "DashboardPartTimeLineDisplayTypeField",
+                        controlCss: " always-send",
+                        fieldCss: hiddenCss(dashboardPart.Type != DashboardPartType.TimeLine),
+                        labelText: Displays.TimeLineDisplayType(context: context),
+                        optionCollection: new Dictionary<string, string>
+                        {
+                            {
+                                TimeLineDisplayType.Simple.ToInt().ToString(),
+                                Displays.TimeLineSimple(context: context)
+                            },
+                            {
+                                TimeLineDisplayType.Standard.ToInt().ToString(),
+                                Displays.TimeLineStandard(context: context)
+                            },
+                            {
+                                TimeLineDisplayType.Detailed.ToInt().ToString(),
+                                Displays.TimeLineDetailed(context: context)
+                            }
+                        },
+                        selectedValue: dashboardPart.TimeLineDisplayType.ToInt().ToString(),
+                        insertBlank: false)
+                    .FieldSpinner(
+                        controlId: "DashboardPartTimeLineItemCount",
+                        fieldId: "DashboardPartTimeLineItemCountField",
+                        fieldCss: "field-auto" + hiddenCss(dashboardPart.Type != DashboardPartType.TimeLine),
+                        controlCss: " always-send",
+                        labelText: Displays.DisplayCount(context: context),
+                        value: dashboardPart.TimeLineItemCount == 0
+                            ? Parameters.Dashboard.TimeLineItemCount
+                            : dashboardPart.TimeLineItemCount,
+                        min: Parameters.Dashboard.TimeLineItemCountMin,
+                        max: Parameters.Dashboard.TimeLineItemCountMax,
+                        step: 1)
+                    .FieldMarkDown(
+                        context: context,
+                        ss: ss,
+                        controlId: "DashboardPartContent",
+                        fieldId: "DashboardPartContentField",
+                        fieldCss: "field-wide"
+                            + hiddenCss(dashboardPart.Type != DashboardPartType.Custom),
+                        controlCss: " always-send",
+                        labelText: Displays.Body(context: context),
+                        text: dashboardPart.Content,
+                        mobile: context.Mobile)
+                    .Field(
+                        fieldId: "DashboardPartHtmlContentField",
+                        fieldCss: "field-wide"
+                            + hiddenCss(dashboardPart.Type != DashboardPartType.CustomHtml),
+                        labelText: Displays.Body(context: context),
+                        controlAction: () => hb
+                            .TextArea(
+                                css: "control-textarea always-send",
+                                name: "DashboardPartHtmlContent",
+                                id: "DashboardPartHtmlContent",
+                                text: dashboardPart.HtmlContent))
+                    .FieldTextBox(
+                        controlId: "DashboardPartExtendedCss",
+                        controlCss: " always-send",
+                        labelText: "CSS",
+                        text: dashboardPart.ExtendedCss));
+        }
+
+        /// <summary>
+        /// Fixed:
+        /// </summary>
+        public static HtmlBuilder DashboardPartViewFiltersTab(
+            this HtmlBuilder hb,
+            Context context,
+            DashboardPart dashboardPart,
+            bool clearView = false,
+            bool _using = true)
+        {
+            if (_using == false) return hb;
+            var view = clearView
+                ? new View()
+                : (dashboardPart.View ?? new View());
+            var currentSs = SiteSettingsUtilities.Get(
+                context: context,
+                dashboardPart.SiteId);
+            if (currentSs == null)
+            {
+                return hb.FieldSet(id: "DashboardPartViewFiltersTabContainer");
+            }
+            return hb.FieldSet(id: "DashboardPartViewFiltersTabContainer",
+                action: () => hb.ViewFiltersTab(
+                    context: context,
+                    ss: currentSs,
+                    view: view,
+                    prefix: "DashboardPart",
+                    currentTableOnly: true));
+        }
+
+        /// <summary>
+        /// Fixed:
+        /// </summary>
+        public static HtmlBuilder DashboardPartViewSortersTab(
+            this HtmlBuilder hb,
+            Context context,
+            DashboardPart dashboardPart,
+            bool clearView = false,
+            bool _using = true)
+        {
+            if (_using == false) return hb;
+            var view = clearView
+                ? new View()
+                : (dashboardPart.View ?? new View());
+            var ss = SiteSettingsUtilities.Get(
+                context: context,
+                dashboardPart.SiteId);
+            if (ss == null)
+            {
+                return hb.FieldSet(id: "DashboardPartViewSortersTabContainer");
+            }
+            return hb.FieldSet(id: "DashboardPartViewSortersTabContainer",
+                action: () => hb.ViewSortersTab(
+                    context: context,
+                    ss: ss,
+                    view: view,
+                    prefix: "DashboardPart",
+                    usekeepSorterState: false,
+                    currentTableOnly: true));
+        }
+
+        /// <summary>
+        /// Fixed:
+        /// </summary>
+        private static HtmlBuilder DashboardPartAccessControlsTab(
+            this HtmlBuilder hb,
+            Context context,
+            SiteSettings ss,
+            DashboardPart dashboardPart)
+        {
+            var currentPermissions = dashboardPart.GetPermissions(ss: ss);
+            var sourcePermissions = PermissionUtilities.SourceCollection(
+                context: context,
+                ss: ss,
+                searchText: context.Forms.Data("SearchDashboardPartAccessControlElements"),
+                currentPermissions: currentPermissions,
+                allUsers: false);
+            var offset = context.Forms.Int("SourceDashboardPartAccessControlOffset");
+            return hb.FieldSet(id: "DashboardPartAccessControlsTab", action: () => hb
+                .Div(id: "DashboardPartAccessControlEditor", action: () => hb
+                    .FieldSelectable(
+                        controlId: "CurrentDashboardPartAccessControl",
+                        fieldCss: "field-vertical both",
+                        controlContainerCss: "container-selectable",
+                        controlCss: " always-send send-all",
+                        labelText: Displays.Permissions(context: context),
+                        listItemCollection: currentPermissions.ToDictionary(
+                            o => o.Key(), o => o.ControlData(
+                                context: context,
+                                ss: ss,
+                                withType: false)),
+                        commandOptionPositionIsTop: true,
+                        commandOptionAction: () => hb
+                            .Div(css: "command-left", action: () => hb
+                                .Button(
+                                    controlCss: "button-icon",
+                                    text: Displays.DeletePermission(context: context),
+                                    onClick: "$p.deleteDashboardPartAccessControl();",
+                                    icon: "ui-icon-circle-triangle-e")))
+                    .FieldSelectable(
+                        controlId: "SourceDashboardPartAccessControl",
+                        fieldCss: "field-vertical",
+                        controlContainerCss: "container-selectable",
+                        controlWrapperCss: " h300",
+                        labelText: Displays.OptionList(context: context),
+                        listItemCollection: sourcePermissions
+                            .Page(offset)
+                            .ListItemCollection(
+                                context: context,
+                                ss: ss,
+                                withType: false),
+                        commandOptionPositionIsTop: true,
+                        action: "Permissions",
+                        method: "post",
+                        commandOptionAction: () => hb
+                            .Div(css: "command-left", action: () => hb
+                                .Button(
+                                    controlCss: "button-icon",
+                                    text: Displays.AddPermission(context: context),
+                                    onClick: "$p.addDashboardPartAccessControl();",
+                                    icon: "ui-icon-circle-triangle-w")
+                                .TextBox(
+                                    controlId: "SearchDashboardPartAccessControl",
+                                    controlCss: " auto-postback w100",
+                                    placeholder: Displays.Search(context: context),
+                                    action: "SetSiteSettings",
+                                    method: "post")
+                                .Button(
+                                    text: Displays.Search(context: context),
+                                    controlCss: "button-icon",
+                                    onClick: "$p.send($('#SearchDashboardPartAccessControl'));",
+                                    icon: "ui-icon-search")))
+                    .Hidden(
+                        controlId: "SourceDashboardPartAccessControlOffset",
+                        css: "always-send",
+                        value: Paging.NextOffset(
+                            offset: offset,
+                            totalCount: sourcePermissions.Count(),
+                            pageSize: Parameters.Permissions.PageSize)
+                                .ToString())));
+        }
+
+        /// <summary>
+        /// Fixed:
+        /// </summary>
         private static string GetClassLabelText(SiteSettings ss, string className)
         {
             return (ss?.ColumnHash?.FirstOrDefault(o => o.Key == className))?.Value?.LabelText ?? className;
@@ -14294,13 +15223,13 @@ namespace Implem.Pleasanter.Models
                                             controlId: "MoveUpBulkUpdateColumnColumnsLocal",
                                             text: Displays.MoveUp(context: context),
                                             controlCss: "button-icon",
-                                            onClick: "$p.moveColumns($(this),'BulkUpdateColumn');",
+                                            onClick: "$p.moveColumns(event, $(this),'BulkUpdateColumn');",
                                             icon: "ui-icon-circle-triangle-n")
                                         .Button(
                                             controlId: "MoveDownBulkUpdateColumnColumnsLocal",
                                             text: Displays.MoveDown(context: context),
                                             controlCss: "button-icon",
-                                            onClick: "$p.moveColumns($(this),'BulkUpdateColumn');",
+                                            onClick: "$p.moveColumns(event, $(this),'BulkUpdateColumn');",
                                             icon: "ui-icon-circle-triangle-s")
                                         .Button(
                                             controlId: "OpenBulkUpdateColumnDetailDialog",
@@ -14314,7 +15243,7 @@ namespace Implem.Pleasanter.Models
                                             controlId: "ToDisableBulkUpdateColumnColumnsLocal",
                                             text: Displays.ToDisable(context: context),
                                             controlCss: "button-icon",
-                                            onClick: "$p.moveColumns($(this),'BulkUpdateColumn');",
+                                            onClick: "$p.moveColumns(event, $(this),'BulkUpdateColumn');",
                                             icon: "ui-icon-circle-triangle-e")))
                             .FieldSelectable(
                                 controlId: "BulkUpdateColumnSourceColumns",
@@ -14333,7 +15262,7 @@ namespace Implem.Pleasanter.Models
                                             controlId: "ToEnableBulkUpdateColumnColumnsLocal",
                                             text: Displays.ToEnable(context: context),
                                             controlCss: "button-icon",
-                                            onClick: "$p.moveColumns($(this),'BulkUpdateColumn');",
+                                            onClick: "$p.moveColumns(event, $(this),'BulkUpdateColumn');",
                                             icon: "ui-icon-circle-triangle-w"))))
                     .Hidden(
                         controlId: "BulkUpdateColumnDetails",
@@ -14550,19 +15479,19 @@ namespace Implem.Pleasanter.Models
                                         controlId: "MoveUpRelatingColumnColumnsLocal",
                                         text: Displays.MoveUp(context: context),
                                         controlCss: "button-icon",
-                                        onClick: "$p.moveColumns($(this),'RelatingColumn');",
+                                        onClick: "$p.moveColumns(event, $(this),'RelatingColumn');",
                                         icon: "ui-icon-circle-triangle-n")
                                     .Button(
                                         controlId: "MoveDownRelatingColumnColumnsLocal",
                                         text: Displays.MoveDown(context: context),
                                         controlCss: "button-icon",
-                                        onClick: "$p.moveColumns($(this),'RelatingColumn');",
+                                        onClick: "$p.moveColumns(event, $(this),'RelatingColumn');",
                                         icon: "ui-icon-circle-triangle-s")
                                     .Button(
                                         controlId: "ToDisableRelatingColumnColumnsLocal",
                                         text: Displays.ToDisable(context: context),
                                         controlCss: "button-icon",
-                                        onClick: "$p.moveColumns($(this),'RelatingColumn');",
+                                        onClick: "$p.moveColumns(event, $(this),'RelatingColumn');",
                                         icon: "ui-icon-circle-triangle-e")))
                         .FieldSelectable(
                             controlId: "RelatingColumnSourceColumns",
@@ -14581,7 +15510,7 @@ namespace Implem.Pleasanter.Models
                                         controlId: "ToEnableRelatingColumnColumnsLocal",
                                         text: Displays.ToEnable(context: context),
                                         controlCss: "button-icon",
-                                        onClick: "$p.moveColumns($(this),'RelatingColumn');",
+                                        onClick: "$p.moveColumns(event, $(this),'RelatingColumn');",
                                         icon: "ui-icon-circle-triangle-w"))))
                     .P(css: "message-dialog")
                     .Div(css: "command-center", action: () => hb

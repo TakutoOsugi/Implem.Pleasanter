@@ -64,68 +64,100 @@ namespace Implem.Pleasanter.Models
         public int SavedOwner = 0;
         public bool SavedLocked = false;
 
-        public bool WorkValue_Updated(Context context, Column column = null)
+        public bool WorkValue_Updated(Context context, bool copy = false, Column column = null)
         {
-            return WorkValue.Value != SavedWorkValue &&
-                (column == null ||
-                column.DefaultInput.IsNullOrEmpty() ||
-                column.GetDefaultInput(context: context).ToDecimal() != WorkValue.Value);
+            if (copy && column?.CopyByDefault == true)
+            {
+                return column.GetDefaultInput(context: context).ToDecimal() != WorkValue.Value;
+            }
+            return WorkValue.Value != SavedWorkValue
+                &&  (column == null
+                    || column.DefaultInput.IsNullOrEmpty()
+                    || column.GetDefaultInput(context: context).ToDecimal() != WorkValue.Value);
         }
 
-        public bool ProgressRate_Updated(Context context, Column column = null)
+        public bool ProgressRate_Updated(Context context, bool copy = false, Column column = null)
         {
-            return ProgressRate.Value != SavedProgressRate &&
-                (column == null ||
-                column.DefaultInput.IsNullOrEmpty() ||
-                column.GetDefaultInput(context: context).ToDecimal() != ProgressRate.Value);
+            if (copy && column?.CopyByDefault == true)
+            {
+                return column.GetDefaultInput(context: context).ToDecimal() != ProgressRate.Value;
+            }
+            return ProgressRate.Value != SavedProgressRate
+                &&  (column == null
+                    || column.DefaultInput.IsNullOrEmpty()
+                    || column.GetDefaultInput(context: context).ToDecimal() != ProgressRate.Value);
         }
 
-        public bool Status_Updated(Context context, Column column = null)
+        public bool Status_Updated(Context context, bool copy = false, Column column = null)
         {
-            return Status.Value != SavedStatus &&
-                (column == null ||
-                column.DefaultInput.IsNullOrEmpty() ||
-                column.GetDefaultInput(context: context).ToInt() != Status.Value);
+            if (copy && column?.CopyByDefault == true)
+            {
+                return column.GetDefaultInput(context: context).ToInt() != Status.Value;
+            }
+            return Status.Value != SavedStatus
+                &&  (column == null
+                    || column.DefaultInput.IsNullOrEmpty()
+                    || column.GetDefaultInput(context: context).ToInt() != Status.Value);
         }
 
-        public bool Manager_Updated(Context context, Column column = null)
+        public bool Manager_Updated(Context context, bool copy = false, Column column = null)
         {
-            return Manager.Id != SavedManager &&
-                (column == null ||
-                column.DefaultInput.IsNullOrEmpty() ||
-                column.GetDefaultInput(context: context).ToInt() != Manager.Id);
+            if (copy && column?.CopyByDefault == true)
+            {
+                return column.GetDefaultInput(context: context).ToInt() != Manager.Id;
+            }
+            return Manager.Id != SavedManager
+                &&  (column == null
+                    || column.DefaultInput.IsNullOrEmpty()
+                    || column.GetDefaultInput(context: context).ToInt() != Manager.Id);
         }
 
-        public bool Owner_Updated(Context context, Column column = null)
+        public bool Owner_Updated(Context context, bool copy = false, Column column = null)
         {
-            return Owner.Id != SavedOwner &&
-                (column == null ||
-                column.DefaultInput.IsNullOrEmpty() ||
-                column.GetDefaultInput(context: context).ToInt() != Owner.Id);
+            if (copy && column?.CopyByDefault == true)
+            {
+                return column.GetDefaultInput(context: context).ToInt() != Owner.Id;
+            }
+            return Owner.Id != SavedOwner
+                &&  (column == null
+                    || column.DefaultInput.IsNullOrEmpty()
+                    || column.GetDefaultInput(context: context).ToInt() != Owner.Id);
         }
 
-        public bool Locked_Updated(Context context, Column column = null)
+        public bool Locked_Updated(Context context, bool copy = false, Column column = null)
         {
-            return Locked != SavedLocked &&
-                (column == null ||
-                column.DefaultInput.IsNullOrEmpty() ||
-                column.GetDefaultInput(context: context).ToBool() != Locked);
+            if (copy && column?.CopyByDefault == true)
+            {
+                return column.GetDefaultInput(context: context).ToBool() != Locked;
+            }
+            return Locked != SavedLocked
+                &&  (column == null
+                    || column.DefaultInput.IsNullOrEmpty()
+                    || column.GetDefaultInput(context: context).ToBool() != Locked);
         }
 
-        public bool StartTime_Updated(Context context, Column column = null)
+        public bool StartTime_Updated(Context context, bool copy = false, Column column = null)
         {
-            return StartTime != SavedStartTime &&
-                (column == null ||
-                column.DefaultInput.IsNullOrEmpty() ||
-                column.DefaultTime(context: context).Date != StartTime.Date);
+            if (copy && column?.CopyByDefault == true)
+            {
+                return column.GetDefaultInput(context: context).ToDateTime() != StartTime;
+            }
+            return StartTime != SavedStartTime
+                && (column == null
+                    || column.DefaultInput.IsNullOrEmpty()
+                    || column.DefaultTime(context: context).Date != StartTime.Date);
         }
 
-        public bool CompletionTime_Updated(Context context, Column column = null)
+        public bool CompletionTime_Updated(Context context, bool copy = false, Column column = null)
         {
-            return CompletionTime.Value != SavedCompletionTime &&
-                (column == null ||
-                column.DefaultInput.IsNullOrEmpty() ||
-                column.DefaultTime(context: context).Date != CompletionTime.Value.Date);
+            if (copy && column?.CopyByDefault == true)
+            {
+                return column.GetDefaultInput(context: context).ToDateTime() != CompletionTime.Value;
+            }
+            return CompletionTime.Value != SavedCompletionTime
+                && (column == null
+                    || column.DefaultInput.IsNullOrEmpty()
+                    || column.DefaultTime(context: context).Date != CompletionTime.Value.Date);
         }
 
         public string PropertyValue(Context context, Column column)
@@ -668,7 +700,7 @@ namespace Implem.Pleasanter.Models
             Context context,
             SiteSettings ss,
             Dictionary<string, string> formData = null,
-            bool setByApi = false,
+            IssueApiModel issueApiModel = null,
             MethodTypes methodType = MethodTypes.NotSet)
         {
             OnConstructing(context: context);
@@ -683,8 +715,11 @@ namespace Implem.Pleasanter.Models
                     ss: ss,
                     formData: formData);
             }
-            if (setByApi) SetByApi(context: context, ss: ss);
-            if (formData != null || setByApi)
+            if (issueApiModel != null)
+            {
+                SetByApi(context: context, ss: ss, data: issueApiModel);
+            }
+            if (formData != null || issueApiModel != null)
             {
                 SetByLookups(
                     context: context,
@@ -705,7 +740,8 @@ namespace Implem.Pleasanter.Models
             View view = null,
             bool setCopyDefault = false,
             Dictionary<string, string> formData = null,
-            bool setByApi = false,
+            IssueApiModel issueApiModel = null,
+            SqlColumnCollection column = null,
             bool clearSessions = false,
             List<long> switchTargets = null,
             MethodTypes methodType = MethodTypes.NotSet)
@@ -718,8 +754,10 @@ namespace Implem.Pleasanter.Models
             SiteId = ss.SiteId;
             if (context.QueryStrings.ContainsKey("ver"))
             {
-                Get(context: context,
+                Get(
+                    context: context,
                     tableType: Sqls.TableTypes.NormalAndHistory,
+                    column: column,
                     where: Rds.IssuesWhereDefault(
                         context: context,
                         issueModel: this)
@@ -727,7 +765,11 @@ namespace Implem.Pleasanter.Models
             }
             else
             {
-                Get(context: context, ss: ss, view: view);
+                Get(
+                    context: context,
+                    ss: ss,
+                    view: view,
+                    column: column);
             }
             if (setCopyDefault)
             {
@@ -743,8 +785,11 @@ namespace Implem.Pleasanter.Models
                     ss: ss,
                     formData: formData);
             }
-            if (setByApi) SetByApi(context: context, ss: ss);
-            if (formData != null || setByApi)
+            if (issueApiModel != null)
+            {
+                SetByApi(context: context, ss: ss, data: issueApiModel);
+            }
+            if (formData != null || issueApiModel != null)
             {
                 SetByLookups(
                     context: context,
@@ -2065,7 +2110,11 @@ namespace Implem.Pleasanter.Models
             }
             else if (RecordPermissions != null)
             {
-                statements.UpdatePermissions(context, ss, IssueId, RecordPermissions);
+                statements.UpdatePermissions(
+                    context: context,
+                    ss: ss,
+                    referenceId: IssueId,
+                    permissions: RecordPermissions);
             }
             if (additionalStatements?.Any() == true)
             {
@@ -2560,11 +2609,16 @@ namespace Implem.Pleasanter.Models
             return statements;
         }
 
-        public void SetDefault(Context context, SiteSettings ss)
+        public void SetDefault(
+            Context context,
+            SiteSettings ss)
         {
             ss.Columns
                 .Where(o => !o.DefaultInput.IsNullOrEmpty())
-                .ForEach(column => SetDefault(context: context, ss: ss, column: column));
+                .ForEach(column => SetDefault(
+                    context: context,
+                    ss: ss,
+                    column: column));
         }
 
         public void SetCopyDefault(Context context, SiteSettings ss)
@@ -2582,7 +2636,10 @@ namespace Implem.Pleasanter.Models
                     column: column));
         }
 
-        public void SetDefault(Context context, SiteSettings ss, Column column)
+        public void SetDefault(
+            Context context,
+            SiteSettings ss,
+            Column column)
         {
             var defaultInput = column.GetDefaultInput(context: context);
             switch (column.ColumnName)
@@ -2604,9 +2661,6 @@ namespace Implem.Pleasanter.Models
                     break;
                 case "Locked":
                     Locked = defaultInput.ToBool();
-                    break;
-                case "Timestamp":
-                    Timestamp = defaultInput.ToString();
                     break;
                 case "Manager":
                     Manager = SiteInfo.User(
@@ -3022,14 +3076,8 @@ namespace Implem.Pleasanter.Models
             AttachmentsHash = issueModel.AttachmentsHash;
         }
 
-        public void SetByApi(Context context, SiteSettings ss)
+        public void SetByApi(Context context, SiteSettings ss, IssueApiModel data)
         {
-            var data = context.RequestDataString.Deserialize<IssueApiModel>();
-            if (data == null)
-            {
-                context.InvalidJsonData = !context.RequestDataString.IsNullOrEmpty();
-                return;
-            }
             if (data.Title != null) Title = new Title(data.IssueId.ToLong(), data.Title);
             if (data.Body != null) Body = data.Body.ToString().ToString();
             if (data.StartTime != null) StartTime = data.StartTime.ToDateTime().ToUniversal(context: context); ProgressRate.StartTime = StartTime;
@@ -3898,9 +3946,16 @@ namespace Implem.Pleasanter.Models
                             notification.Send(
                                 context: context,
                                 ss: ss,
-                                title: Displays.Created(
-                                    context: context,
-                                    data: Title.DisplayValue).ToString(),
+                                title: notification.Subject.IsNullOrEmpty()
+                                    ? Displays.Created(
+                                        context: context,
+                                        data: Title.DisplayValue).ToString()
+                                    : ReplacedDisplayValues(
+                                        context: context,
+                                        ss: ss,
+                                        value: notification.Subject.Replace(
+                                            "[NotificationTrigger]",
+                                            Displays.CreatedWord(context: context))),
                                 body: NoticeBody(
                                     context: context,
                                     ss: ss,
@@ -3922,9 +3977,16 @@ namespace Implem.Pleasanter.Models
                             notification.Send(
                                 context: context,
                                 ss: ss,
-                                title: Displays.Updated(
-                                    context: context,
-                                    data: Title.DisplayValue).ToString(),
+                                title: notification.Subject.IsNullOrEmpty()
+                                    ? Displays.Updated(
+                                        context: context,
+                                        data: Title.DisplayValue).ToString()
+                                    : ReplacedDisplayValues(
+                                        context: context,
+                                        ss: ss,
+                                        value: notification.Subject.Replace(
+                                            "[NotificationTrigger]",
+                                            Displays.UpdatedWord(context: context))),
                                 body: body,
                                 values: values);
                         }
@@ -3935,9 +3997,16 @@ namespace Implem.Pleasanter.Models
                             notification.Send(
                                 context: context,
                                 ss: ss,
-                                title: Displays.Deleted(
-                                    context: context,
-                                    data: Title.DisplayValue).ToString(),
+                                title: notification.Subject.IsNullOrEmpty()
+                                    ? Displays.Deleted(
+                                        context: context,
+                                        data: Title.DisplayValue).ToString()
+                                    : ReplacedDisplayValues(
+                                        context: context,
+                                        ss: ss,
+                                        value: notification.Subject.Replace(
+                                            "[NotificationTrigger]",
+                                            Displays.DeletedWord(context: context))),
                                 body: NoticeBody(
                                     context: context,
                                     ss: ss,

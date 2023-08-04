@@ -24,6 +24,7 @@ namespace Implem.Pleasanter.Libraries.Models
             var filter = controlId.StartsWith("ViewFilters__")
                 || controlId.StartsWith("ProcessViewFilters__")
                 || controlId.StartsWith("StatusControlViewFilters__")
+                || controlId.StartsWith("DashboardViewFilters__")
                 || controlId.StartsWith("ViewFiltersOnGridHeader__");
             var searchText = context.Forms.Data("DropDownSearchText");
             string parentClass = context.Forms.Data("DropDownSearchParentClass");
@@ -269,19 +270,19 @@ namespace Implem.Pleasanter.Libraries.Models
             var filter = controlId.StartsWith("ViewFilters__")
                 || controlId.StartsWith("ProcessViewFilters__")
                 || controlId.StartsWith("StatusControlViewFilters__")
+                || controlId.StartsWith("DashboardViewFilters__")
                 || controlId.StartsWith("ViewFiltersOnGridHeader__");
-            var searchText = context.Forms.Data("DropDownSearchText");
+            var multiple = context.Forms.Bool("DropDownSearchMultiple");
+            var selected = multiple
+                ? context.Forms.List("DropDownSearchResultsAll")
+                : context.Forms.List("DropDownSearchResults");
             var column = SearchDropDownColumn(
                 context: context,
                 ss: ss,
                 controlId: controlId,
                 referenceId: referenceId,
-                searchText: searchText,
+                selectedValues: selected,
                 searchFormat: false);
-            var multiple = context.Forms.Bool("DropDownSearchMultiple");
-            var selected = multiple
-                ? context.Forms.List("DropDownSearchResultsAll")
-                : context.Forms.List("DropDownSearchResults");
             if (multiple)
             {
                 return SelectSearchDropDownResponse(
@@ -315,7 +316,8 @@ namespace Implem.Pleasanter.Libraries.Models
             SiteSettings ss,
             string controlId,
             long referenceId,
-            string searchText,
+            string searchText = "",
+            List<string> selectedValues = null,
             int offset = 0,
             string parentClass = "",
             List<long> parentIds = null,
@@ -372,6 +374,7 @@ namespace Implem.Pleasanter.Libraries.Models
                         columnName: column.Name,
                         searchIndexes: searchIndexes,
                         searchColumnOnly: searchColumnOnly,
+                        selectedValues: selectedValues,
                         offset: offset,
                         parentClass: parentClass,
                         parentIds: parentIds,

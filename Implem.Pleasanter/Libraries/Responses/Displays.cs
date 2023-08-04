@@ -2329,6 +2329,16 @@ namespace Implem.Pleasanter.Libraries.Responses
                 data: data);
         }
 
+        public static string CreatedWord(
+            Context context,
+            params string[] data)
+        {
+            return Get(
+                context: context,
+                id: "CreatedWord",
+                data: data);
+        }
+
         public static string CreateOrUpdate(
             Context context,
             params string[] data)
@@ -2496,6 +2506,56 @@ namespace Implem.Pleasanter.Libraries.Responses
             return Get(
                 context: context,
                 id: "Daily",
+                data: data);
+        }
+
+        public static string DashboardCustom(
+            Context context,
+            params string[] data)
+        {
+            return Get(
+                context: context,
+                id: "DashboardCustom",
+                data: data);
+        }
+
+        public static string DashboardCustomHtml(
+            Context context,
+            params string[] data)
+        {
+            return Get(
+                context: context,
+                id: "DashboardCustomHtml",
+                data: data);
+        }
+
+        public static string DashboardGuide(
+            Context context,
+            params string[] data)
+        {
+            return Get(
+                context: context,
+                id: "DashboardGuide",
+                data: data);
+        }
+
+        public static string DashboardParts(
+            Context context,
+            params string[] data)
+        {
+            return Get(
+                context: context,
+                id: "DashboardParts",
+                data: data);
+        }
+
+        public static string Dashboards(
+            Context context,
+            params string[] data)
+        {
+            return Get(
+                context: context,
+                id: "Dashboards",
                 data: data);
         }
 
@@ -2799,6 +2859,16 @@ namespace Implem.Pleasanter.Libraries.Responses
                 data: data);
         }
 
+        public static string DeletedWord(
+            Context context,
+            params string[] data)
+        {
+            return Get(
+                context: context,
+                id: "DeletedWord",
+                data: data);
+        }
+
         public static string DeleteFromTrashBox(
             Context context,
             params string[] data)
@@ -2999,6 +3069,16 @@ namespace Implem.Pleasanter.Libraries.Responses
                 data: data);
         }
 
+        public static string DisplayCount(
+            Context context,
+            params string[] data)
+        {
+            return Get(
+                context: context,
+                id: "DisplayCount",
+                data: data);
+        }
+
         public static string Displayed(
             Context context,
             params string[] data)
@@ -3016,6 +3096,16 @@ namespace Implem.Pleasanter.Libraries.Responses
             return Get(
                 context: context,
                 id: "DisplayName",
+                data: data);
+        }
+
+        public static string DisplayTitle(
+            Context context,
+            params string[] data)
+        {
+            return Get(
+                context: context,
+                id: "DisplayTitle",
                 data: data);
         }
 
@@ -4099,6 +4189,16 @@ namespace Implem.Pleasanter.Libraries.Responses
                 data: data);
         }
 
+        public static string HasNotChangeColumnPermission(
+            Context context,
+            params string[] data)
+        {
+            return Get(
+                context: context,
+                id: "HasNotChangeColumnPermission",
+                data: data);
+        }
+
         public static string HasNotPermission(
             Context context,
             params string[] data)
@@ -4106,6 +4206,16 @@ namespace Implem.Pleasanter.Libraries.Responses
             return Get(
                 context: context,
                 id: "HasNotPermission",
+                data: data);
+        }
+
+        public static string Height(
+            Context context,
+            params string[] data)
+        {
+            return Get(
+                context: context,
+                id: "Height",
                 data: data);
         }
 
@@ -4186,6 +4296,16 @@ namespace Implem.Pleasanter.Libraries.Responses
             return Get(
                 context: context,
                 id: "HistoryOnGrid",
+                data: data);
+        }
+
+        public static string Horizontal(
+            Context context,
+            params string[] data)
+        {
+            return Get(
+                context: context,
+                id: "Horizontal",
                 data: data);
         }
 
@@ -4746,6 +4866,16 @@ namespace Implem.Pleasanter.Libraries.Responses
             return Get(
                 context: context,
                 id: "InvalidSsoCode",
+                data: data);
+        }
+
+        public static string InvalidTimeLineSites(
+            Context context,
+            params string[] data)
+        {
+            return Get(
+                context: context,
+                id: "InvalidTimeLineSites",
                 data: data);
         }
 
@@ -5556,6 +5686,16 @@ namespace Implem.Pleasanter.Libraries.Responses
             return Get(
                 context: context,
                 id: "Manage",
+                data: data);
+        }
+
+        public static string ManageDashboard(
+            Context context,
+            params string[] data)
+        {
+            return Get(
+                context: context,
+                id: "ManageDashboard",
                 data: data);
         }
 
@@ -6879,6 +7019,16 @@ namespace Implem.Pleasanter.Libraries.Responses
                 data: data);
         }
 
+        public static string PartsType(
+            Context context,
+            params string[] data)
+        {
+            return Get(
+                context: context,
+                id: "PartsType",
+                data: data);
+        }
+
         public static string Password(
             Context context,
             params string[] data)
@@ -7219,6 +7369,26 @@ namespace Implem.Pleasanter.Libraries.Responses
                 data: data);
         }
 
+        public static string QuickAccess(
+            Context context,
+            params string[] data)
+        {
+            return Get(
+                context: context,
+                id: "QuickAccess",
+                data: data);
+        }
+
+        public static string QuickAccessLayout(
+            Context context,
+            params string[] data)
+        {
+            return Get(
+                context: context,
+                id: "QuickAccessLayout",
+                data: data);
+        }
+
         public static string RadioButton(
             Context context,
             params string[] data)
@@ -7319,6 +7489,16 @@ namespace Implem.Pleasanter.Libraries.Responses
                 data: data);
         }
 
+        public static string RecordBody(
+            Context context,
+            params string[] data)
+        {
+            return Get(
+                context: context,
+                id: "RecordBody",
+                data: data);
+        }
+
         public static string RecordControl(
             Context context,
             params string[] data)
@@ -7326,6 +7506,16 @@ namespace Implem.Pleasanter.Libraries.Responses
             return Get(
                 context: context,
                 id: "RecordControl",
+                data: data);
+        }
+
+        public static string RecordTitle(
+            Context context,
+            params string[] data)
+        {
+            return Get(
+                context: context,
+                id: "RecordTitle",
                 data: data);
         }
 
@@ -7579,6 +7769,16 @@ namespace Implem.Pleasanter.Libraries.Responses
                 data: data);
         }
 
+        public static string ResetTimeLineView(
+            Context context,
+            params string[] data)
+        {
+            return Get(
+                context: context,
+                id: "ResetTimeLineView",
+                data: data);
+        }
+
         public static string ResetType(
             Context context,
             params string[] data)
@@ -7716,6 +7916,16 @@ namespace Implem.Pleasanter.Libraries.Responses
             return Get(
                 context: context,
                 id: "Save",
+                data: data);
+        }
+
+        public static string SaveLayout(
+            Context context,
+            params string[] data)
+        {
+            return Get(
+                context: context,
+                id: "SaveLayout",
                 data: data);
         }
 
@@ -8809,6 +9019,56 @@ namespace Implem.Pleasanter.Libraries.Responses
                 data: data);
         }
 
+        public static string TimeLine(
+            Context context,
+            params string[] data)
+        {
+            return Get(
+                context: context,
+                id: "TimeLine",
+                data: data);
+        }
+
+        public static string TimeLineDetailed(
+            Context context,
+            params string[] data)
+        {
+            return Get(
+                context: context,
+                id: "TimeLineDetailed",
+                data: data);
+        }
+
+        public static string TimeLineDisplayType(
+            Context context,
+            params string[] data)
+        {
+            return Get(
+                context: context,
+                id: "TimeLineDisplayType",
+                data: data);
+        }
+
+        public static string TimeLineSimple(
+            Context context,
+            params string[] data)
+        {
+            return Get(
+                context: context,
+                id: "TimeLineSimple",
+                data: data);
+        }
+
+        public static string TimeLineStandard(
+            Context context,
+            params string[] data)
+        {
+            return Get(
+                context: context,
+                id: "TimeLineStandard",
+                data: data);
+        }
+
         public static string TimeOut(
             Context context,
             params string[] data)
@@ -9176,6 +9436,16 @@ namespace Implem.Pleasanter.Libraries.Responses
             return Get(
                 context: context,
                 id: "UpdatedTime",
+                data: data);
+        }
+
+        public static string UpdatedWord(
+            Context context,
+            params string[] data)
+        {
+            return Get(
+                context: context,
+                id: "UpdatedWord",
                 data: data);
         }
 
@@ -9589,6 +9859,16 @@ namespace Implem.Pleasanter.Libraries.Responses
                 data: data);
         }
 
+        public static string Vertical(
+            Context context,
+            params string[] data)
+        {
+            return Get(
+                context: context,
+                id: "Vertical",
+                data: data);
+        }
+
         public static string VerUp(
             Context context,
             params string[] data)
@@ -9706,6 +9986,16 @@ namespace Implem.Pleasanter.Libraries.Responses
             return Get(
                 context: context,
                 id: "Wide",
+                data: data);
+        }
+
+        public static string Width(
+            Context context,
+            params string[] data)
+        {
+            return Get(
+                context: context,
+                id: "Width",
                 data: data);
         }
 
@@ -10126,6 +10416,26 @@ namespace Implem.Pleasanter.Libraries.Responses
             return Get(
                 context: context,
                 id: "Binaries_Title",
+                data: data);
+        }
+
+        public static string Dashboards_DashboardId(
+            Context context,
+            params string[] data)
+        {
+            return Get(
+                context: context,
+                id: "Dashboards_DashboardId",
+                data: data);
+        }
+
+        public static string Dashboards_Locked(
+            Context context,
+            params string[] data)
+        {
+            return Get(
+                context: context,
+                id: "Dashboards_Locked",
                 data: data);
         }
 
@@ -11829,6 +12139,16 @@ namespace Implem.Pleasanter.Libraries.Responses
                 data: data);
         }
 
+        public static string SysLogs_Api(
+            Context context,
+            params string[] data)
+        {
+            return Get(
+                context: context,
+                id: "SysLogs_Api",
+                data: data);
+        }
+
         public static string SysLogs_Application(
             Context context,
             params string[] data)
@@ -11916,6 +12236,16 @@ namespace Implem.Pleasanter.Libraries.Responses
             return Get(
                 context: context,
                 id: "SysLogs_Creator",
+                data: data);
+        }
+
+        public static string SysLogs_Description(
+            Context context,
+            params string[] data)
+        {
+            return Get(
+                context: context,
+                id: "SysLogs_Description",
                 data: data);
         }
 
@@ -12029,6 +12359,26 @@ namespace Implem.Pleasanter.Libraries.Responses
                 data: data);
         }
 
+        public static string SysLogs_ReferenceId(
+            Context context,
+            params string[] data)
+        {
+            return Get(
+                context: context,
+                id: "SysLogs_ReferenceId",
+                data: data);
+        }
+
+        public static string SysLogs_ReferenceType(
+            Context context,
+            params string[] data)
+        {
+            return Get(
+                context: context,
+                id: "SysLogs_ReferenceType",
+                data: data);
+        }
+
         public static string SysLogs_RequestData(
             Context context,
             params string[] data)
@@ -12099,6 +12449,16 @@ namespace Implem.Pleasanter.Libraries.Responses
                 data: data);
         }
 
+        public static string SysLogs_SiteId(
+            Context context,
+            params string[] data)
+        {
+            return Get(
+                context: context,
+                id: "SysLogs_SiteId",
+                data: data);
+        }
+
         public static string SysLogs_StartTime(
             Context context,
             params string[] data)
@@ -12106,6 +12466,16 @@ namespace Implem.Pleasanter.Libraries.Responses
             return Get(
                 context: context,
                 id: "SysLogs_StartTime",
+                data: data);
+        }
+
+        public static string SysLogs_Status(
+            Context context,
+            params string[] data)
+        {
+            return Get(
+                context: context,
+                id: "SysLogs_Status",
                 data: data);
         }
 
@@ -12376,6 +12746,16 @@ namespace Implem.Pleasanter.Libraries.Responses
             return Get(
                 context: context,
                 id: "Tenants_Title",
+                data: data);
+        }
+
+        public static string Tenants_TopDashboards(
+            Context context,
+            params string[] data)
+        {
+            return Get(
+                context: context,
+                id: "Tenants_TopDashboards",
                 data: data);
         }
 
@@ -13136,6 +13516,126 @@ namespace Implem.Pleasanter.Libraries.Responses
             return Get(
                 context: context,
                 id: "Binaries_VerUp",
+                data: data);
+        }
+
+        public static string Dashboards_Body(
+            Context context,
+            params string[] data)
+        {
+            return Get(
+                context: context,
+                id: "Dashboards_Body",
+                data: data);
+        }
+
+        public static string Dashboards_SiteId(
+            Context context,
+            params string[] data)
+        {
+            return Get(
+                context: context,
+                id: "Dashboards_SiteId",
+                data: data);
+        }
+
+        public static string Dashboards_Title(
+            Context context,
+            params string[] data)
+        {
+            return Get(
+                context: context,
+                id: "Dashboards_Title",
+                data: data);
+        }
+
+        public static string Dashboards_TitleBody(
+            Context context,
+            params string[] data)
+        {
+            return Get(
+                context: context,
+                id: "Dashboards_TitleBody",
+                data: data);
+        }
+
+        public static string Dashboards_UpdatedTime(
+            Context context,
+            params string[] data)
+        {
+            return Get(
+                context: context,
+                id: "Dashboards_UpdatedTime",
+                data: data);
+        }
+
+        public static string Dashboards_Comments(
+            Context context,
+            params string[] data)
+        {
+            return Get(
+                context: context,
+                id: "Dashboards_Comments",
+                data: data);
+        }
+
+        public static string Dashboards_CreatedTime(
+            Context context,
+            params string[] data)
+        {
+            return Get(
+                context: context,
+                id: "Dashboards_CreatedTime",
+                data: data);
+        }
+
+        public static string Dashboards_Creator(
+            Context context,
+            params string[] data)
+        {
+            return Get(
+                context: context,
+                id: "Dashboards_Creator",
+                data: data);
+        }
+
+        public static string Dashboards_Timestamp(
+            Context context,
+            params string[] data)
+        {
+            return Get(
+                context: context,
+                id: "Dashboards_Timestamp",
+                data: data);
+        }
+
+        public static string Dashboards_Updator(
+            Context context,
+            params string[] data)
+        {
+            return Get(
+                context: context,
+                id: "Dashboards_Updator",
+                data: data);
+        }
+
+        public static string Dashboards_Ver(
+            Context context,
+            params string[] data)
+        {
+            return Get(
+                context: context,
+                id: "Dashboards_Ver",
+                data: data);
+        }
+
+        public static string Dashboards_VerUp(
+            Context context,
+            params string[] data)
+        {
+            return Get(
+                context: context,
+                id: "Dashboards_VerUp",
                 data: data);
         }
 

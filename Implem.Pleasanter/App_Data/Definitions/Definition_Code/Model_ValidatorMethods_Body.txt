@@ -9,15 +9,35 @@
 <!--Model_Validator_ShowProfiles-->
 <!--Model_Validator_ApiCanRead-->
 
-    if (!api && ss.GetNoDisplayIfReadOnly())
+    if (!api && ss.GetNoDisplayIfReadOnly(context: context))
     {
-        return new ErrorData(type: Error.Types.NotFound);
+        return new ErrorData(
+            context: context,
+            type: Error.Types.NotFound,
+            api: api,
+            sysLogsStatus: 403,
+            sysLogsDescription: Debugs.GetSysLogsDescription());
     }
     return context.HasPermission(ss: ss)
-        ? new ErrorData(type: Error.Types.None)
+        ? new ErrorData(
+            context: context,
+            type: Error.Types.None,
+            api: api,
+            sysLogsStatus: 200,
+            sysLogsDescription: Debugs.GetSysLogsDescription())
         : !context.CanRead(ss: ss)
-            ? new ErrorData(type: Error.Types.NotFound)
-            : new ErrorData(type: Error.Types.HasNotPermission);
+            ? new ErrorData(
+                context: context,
+                type: Error.Types.NotFound,
+                api: api,
+                sysLogsStatus: 403,
+                sysLogsDescription: Debugs.GetSysLogsDescription())
+            : new ErrorData(
+                context: context,
+                type: Error.Types.HasNotPermission,
+                api: api,
+                sysLogsStatus: 403,
+                sysLogsDescription: Debugs.GetSysLogsDescription());
 }
 
 public static ErrorData OnGet(
@@ -30,8 +50,18 @@ public static ErrorData OnGet(
 <!--Model_Validator_Api-->
 
     return context.CanRead(ss: ss)
-        ? new ErrorData(type: Error.Types.None)
-        : new ErrorData(type: Error.Types.NotFound);
+        ? new ErrorData(
+            context: context,
+            type: Error.Types.None,
+            api: api,
+            sysLogsStatus: 200,
+            sysLogsDescription: Debugs.GetSysLogsDescription())
+        : new ErrorData(
+            context: context,
+            type: Error.Types.NotFound,
+            api: api,
+            sysLogsStatus: 403,
+            sysLogsDescription: Debugs.GetSysLogsDescription());
 }
 
 public static ErrorData OnEditing(
@@ -45,9 +75,14 @@ public static ErrorData OnEditing(
 <!--Model_Validator_Api-->
 <!--Model_Validator_ShowProfilesAndHasPrivilege-->
 
-    if (ss.GetNoDisplayIfReadOnly())
+    if (ss.GetNoDisplayIfReadOnly(context: context))
     {
-        return new ErrorData(type: Error.Types.NotFound);
+        return new ErrorData(
+            context: context,
+            type: Error.Types.NotFound,
+            api: api,
+            sysLogsStatus: 403,
+            sysLogsDescription: Debugs.GetSysLogsDescription());
     }
     switch (#modelName#Model.MethodType)
     {
@@ -55,16 +90,46 @@ public static ErrorData OnEditing(
             return
                 context.CanRead(ss: ss)
                 && #modelName#Model.AccessStatus != Databases.AccessStatuses.NotFound
-                    ? new ErrorData(type: Error.Types.None)
-                    : new ErrorData(type: Error.Types.NotFound);
+                    ? new ErrorData(
+                        context: context,
+                        type: Error.Types.None,
+                        api: api,
+                        sysLogsStatus: 200,
+                        sysLogsDescription: Debugs.GetSysLogsDescription())
+                    : new ErrorData(
+                        context: context,
+                        type: Error.Types.NotFound,
+                        api: api,
+                        sysLogsStatus: 403,
+                        sysLogsDescription: Debugs.GetSysLogsDescription());
         case BaseModel.MethodTypes.New:
             return context.CanCreate(ss: ss)
-                ? new ErrorData(type: Error.Types.None)
+                ? new ErrorData(
+                    context: context,
+                    type: Error.Types.None,
+                    api: api,
+                    sysLogsStatus: 200,
+                    sysLogsDescription: Debugs.GetSysLogsDescription())
                 : !context.CanRead(ss: ss)
-                    ? new ErrorData(type: Error.Types.NotFound)
-                    : new ErrorData(type: Error.Types.HasNotPermission);
+                    ? new ErrorData(
+                        context: context,
+                        type: Error.Types.NotFound,
+                        api: api,
+                        sysLogsStatus: 403,
+                        sysLogsDescription: Debugs.GetSysLogsDescription())
+                    : new ErrorData(
+                        context: context,
+                        type: Error.Types.HasNotPermission,
+                        api: api,
+                        sysLogsStatus: 403,
+                        sysLogsDescription: Debugs.GetSysLogsDescription());
         default:
-            return new ErrorData(type: Error.Types.NotFound);
+            return new ErrorData(
+                context: context,
+                type: Error.Types.NotFound,
+                api: api,
+                sysLogsStatus: 403,
+                sysLogsDescription: Debugs.GetSysLogsDescription());
     }
 }
 
@@ -72,6 +137,7 @@ public static ErrorData OnCreating(
     Context context,
     SiteSettings ss,
     #ModelName#Model #modelName#Model,
+    bool copy = false,
     bool api = false,
     bool serverScript = false)
 {
@@ -83,8 +149,18 @@ public static ErrorData OnCreating(
     if (!context.CanCreate(ss: ss) || #modelName#Model.ReadOnly)
     {
         return !context.CanRead(ss: ss)
-            ? new ErrorData(type: Error.Types.NotFound)
-            : new ErrorData(type: Error.Types.HasNotPermission);
+            ? new ErrorData(
+                context: context,
+                type: Error.Types.NotFound,
+                api: api,
+                sysLogsStatus: 403,
+                sysLogsDescription: Debugs.GetSysLogsDescription())
+            : new ErrorData(
+                context: context,
+                type: Error.Types.HasNotPermission,
+                api: api,
+                sysLogsStatus: 403,
+                sysLogsDescription: Debugs.GetSysLogsDescription());
     }
     foreach (var column in ss.Columns
         .Where(o => !o.CanCreate(
@@ -103,7 +179,13 @@ public static ErrorData OnCreating(
             case "Comments":
                 if (#modelName#Model.Comments_Updated(context: context))
                 {
-                    return new ErrorData(type: Error.Types.HasNotPermission);
+                    return new ErrorData(
+                        context: context,
+                        type: Error.Types.HasNotChangeColumnPermission,
+                        data: column.LabelText,
+                        api: api,
+                        sysLogsStatus: 403,
+                        sysLogsDescription: Debugs.GetSysLogsDescription());
                 }
                 break;
             default:
@@ -112,55 +194,97 @@ public static ErrorData OnCreating(
                     case "Class":
                         if (#modelName#Model.Class_Updated(
                             columnName: column.Name,
+                            copy: copy,
                             context: context,
                             column: column))
                         {
-                            return new ErrorData(type: Error.Types.HasNotPermission);
+                            return new ErrorData(
+                                context: context,
+                                type: Error.Types.HasNotChangeColumnPermission,
+                                data: column.LabelText,
+                                api: api,
+                                sysLogsStatus: 403,
+                                sysLogsDescription: Debugs.GetSysLogsDescription());
                         }
                         break;
                     case "Num":
                         if (#modelName#Model.Num_Updated(
                             columnName: column.Name,
+                            copy: copy,
                             context: context,
                             column: column))
                         {
-                            return new ErrorData(type: Error.Types.HasNotPermission);
+                            return new ErrorData(
+                                context: context,
+                                type: Error.Types.HasNotChangeColumnPermission,
+                                data: column.LabelText,
+                                api: api,
+                                sysLogsStatus: 403,
+                                sysLogsDescription: Debugs.GetSysLogsDescription());
                         }
                         break;
                     case "Date":
                         if (#modelName#Model.Date_Updated(
                             columnName: column.Name,
+                            copy: copy,
                             context: context,
                             column: column))
                         {
-                            return new ErrorData(type: Error.Types.HasNotPermission);
+                            return new ErrorData(
+                                context: context,
+                                type: Error.Types.HasNotChangeColumnPermission,
+                                data: column.LabelText,
+                                api: api,
+                                sysLogsStatus: 403,
+                                sysLogsDescription: Debugs.GetSysLogsDescription());
                         }
                         break;
                     case "Description":
                         if (#modelName#Model.Description_Updated(
                             columnName: column.Name,
+                            copy: copy,
                             context: context,
                             column: column))
                         {
-                            return new ErrorData(type: Error.Types.HasNotPermission);
+                            return new ErrorData(
+                                context: context,
+                                type: Error.Types.HasNotChangeColumnPermission,
+                                data: column.LabelText,
+                                api: api,
+                                sysLogsStatus: 403,
+                                sysLogsDescription: Debugs.GetSysLogsDescription());
                         }
                         break;
                     case "Check":
                         if (#modelName#Model.Check_Updated(
                             columnName: column.Name,
+                            copy: copy,
                             context: context,
                             column: column))
                         {
-                            return new ErrorData(type: Error.Types.HasNotPermission);
+                            return new ErrorData(
+                                context: context,
+                                type: Error.Types.HasNotChangeColumnPermission,
+                                data: column.LabelText,
+                                api: api,
+                                sysLogsStatus: 403,
+                                sysLogsDescription: Debugs.GetSysLogsDescription());
                         }
                         break;
                     case "Attachments":
                         if (#modelName#Model.Attachments_Updated(
                             columnName: column.Name,
+                            copy: copy,
                             context: context,
                             column: column))
                         {
-                            return new ErrorData(type: Error.Types.HasNotPermission);
+                            return new ErrorData(
+                                context: context,
+                                type: Error.Types.HasNotChangeColumnPermission,
+                                data: column.LabelText,
+                                api: api,
+                                sysLogsStatus: 403,
+                                sysLogsDescription: Debugs.GetSysLogsDescription());
                         }
                         break;
                 }
@@ -171,7 +295,12 @@ public static ErrorData OnCreating(
 <!--Model_Validator_OnAttaching-->
 <!--Model_Validator_OnInputValidating-->
 
-    return new ErrorData(type: Error.Types.None);
+    return new ErrorData(
+        context: context,
+        type: Error.Types.None,
+        api: api,
+        sysLogsStatus: 200,
+        sysLogsDescription: Debugs.GetSysLogsDescription());
 }
 
 public static ErrorData OnUpdating(
@@ -192,8 +321,18 @@ public static ErrorData OnUpdating(
     if (!context.CanUpdate(ss: ss) || #modelName#Model.ReadOnly)
     {
         return !context.CanRead(ss: ss)
-            ? new ErrorData(type: Error.Types.NotFound)
-            : new ErrorData(type: Error.Types.HasNotPermission);
+            ? new ErrorData(
+                context: context,
+                type: Error.Types.NotFound,
+                api: api,
+                sysLogsStatus: 403,
+                sysLogsDescription: Debugs.GetSysLogsDescription())
+            : new ErrorData(
+                context: context,
+                type: Error.Types.HasNotPermission,
+                api: api,
+                sysLogsStatus: 403,
+                sysLogsDescription: Debugs.GetSysLogsDescription());
     }
     foreach (var column in ss.Columns
         .Where(o => !o.CanUpdate(
@@ -210,7 +349,13 @@ public static ErrorData OnUpdating(
             case "Comments":
                 if (#modelName#Model.Comments_Updated(context: context))
                 {
-                    return new ErrorData(type: Error.Types.HasNotPermission);
+                    return new ErrorData(
+                        context: context,
+                        type: Error.Types.HasNotChangeColumnPermission,
+                        data: column.LabelText,
+                        api: api,
+                        sysLogsStatus: 403,
+                        sysLogsDescription: Debugs.GetSysLogsDescription());
                 }
                 break;
             default:
@@ -219,55 +364,85 @@ public static ErrorData OnUpdating(
                     case "Class":
                         if (#modelName#Model.Class_Updated(
                             columnName: column.Name,
-                            context: context,
-                            column: column))
+                            context: context))
                         {
-                            return new ErrorData(type: Error.Types.HasNotPermission);
+                            return new ErrorData(
+                                context: context,
+                                type: Error.Types.HasNotChangeColumnPermission,
+                                data: column.LabelText,
+                                api: api,
+                                sysLogsStatus: 403,
+                                sysLogsDescription: Debugs.GetSysLogsDescription());
                         }
                         break;
                     case "Num":
                         if (#modelName#Model.Num_Updated(
                             columnName: column.Name,
-                            context: context,
-                            column: column))
+                            context: context))
                         {
-                            return new ErrorData(type: Error.Types.HasNotPermission);
+                            return new ErrorData(
+                                context: context,
+                                type: Error.Types.HasNotChangeColumnPermission,
+                                data: column.LabelText,
+                                api: api,
+                                sysLogsStatus: 403,
+                                sysLogsDescription: Debugs.GetSysLogsDescription());
                         }
                         break;
                     case "Date":
                         if (#modelName#Model.Date_Updated(
                             columnName: column.Name,
-                            context: context,
-                            column: column))
+                            context: context))
                         {
-                            return new ErrorData(type: Error.Types.HasNotPermission);
+                            return new ErrorData(
+                                context: context,
+                                type: Error.Types.HasNotChangeColumnPermission,
+                                data: column.LabelText,
+                                api: api,
+                                sysLogsStatus: 403,
+                                sysLogsDescription: Debugs.GetSysLogsDescription());
                         }
                         break;
                     case "Description":
                         if (#modelName#Model.Description_Updated(
                             columnName: column.Name,
-                            context: context,
-                            column: column))
+                            context: context))
                         {
-                            return new ErrorData(type: Error.Types.HasNotPermission);
+                            return new ErrorData(
+                                context: context,
+                                type: Error.Types.HasNotChangeColumnPermission,
+                                data: column.LabelText,
+                                api: api,
+                                sysLogsStatus: 403,
+                                sysLogsDescription: Debugs.GetSysLogsDescription());
                         }
                         break;
                     case "Check":
                         if (#modelName#Model.Check_Updated(
                             columnName: column.Name,
-                            context: context,
-                            column: column))
+                            context: context))
                         {
-                            return new ErrorData(type: Error.Types.HasNotPermission);
+                            return new ErrorData(
+                                context: context,
+                                type: Error.Types.HasNotChangeColumnPermission,
+                                data: column.LabelText,
+                                api: api,
+                                sysLogsStatus: 403,
+                                sysLogsDescription: Debugs.GetSysLogsDescription());
                         }
                         break;
                     case "Attachments":
                         if (#modelName#Model.Attachments_Updated(
                             columnName: column.Name,
-                            context: context,
-                            column: column))
+                            context: context))
                         {
-                            return new ErrorData(type: Error.Types.HasNotPermission);
+                            return new ErrorData(
+                                context: context,
+                                type: Error.Types.HasNotChangeColumnPermission,
+                                data: column.LabelText,
+                                api: api,
+                                sysLogsStatus: 403,
+                                sysLogsDescription: Debugs.GetSysLogsDescription());
                         }
                         break;
                 }
@@ -278,7 +453,12 @@ public static ErrorData OnUpdating(
 <!--Model_Validator_OnAttaching-->
 <!--Model_Validator_OnInputValidating-->
 
-    return new ErrorData(type: Error.Types.None);
+    return new ErrorData(
+        context: context,
+        type: Error.Types.None,
+        api: api,
+        sysLogsStatus: 200,
+        sysLogsDescription: Debugs.GetSysLogsDescription());
 }
 
 <!--Model_Validator_OnMoving-->
@@ -297,10 +477,25 @@ public static ErrorData OnDeleting(
 <!--Model_Validator_ShowProfilesAndHasPrivilege-->
 
     return context.CanDelete(ss: ss) && !#modelName#Model.ReadOnly
-        ? new ErrorData(type: Error.Types.None)
+        ? new ErrorData(
+            context: context,
+            type: Error.Types.None,
+            api: api,
+            sysLogsStatus: 200,
+            sysLogsDescription: Debugs.GetSysLogsDescription())
         : !context.CanRead(ss: ss)
-            ? new ErrorData(type: Error.Types.NotFound)
-            : new ErrorData(type: Error.Types.HasNotPermission);
+            ? new ErrorData(
+                context: context,
+                type: Error.Types.NotFound,
+                api: api,
+                sysLogsStatus: 403,
+                sysLogsDescription: Debugs.GetSysLogsDescription())
+            : new ErrorData(
+                context: context,
+                type: Error.Types.HasNotPermission,
+                api: api,
+                sysLogsStatus: 403,
+                sysLogsDescription: Debugs.GetSysLogsDescription());
 }
 
 public static ErrorData OnRestoring(
@@ -315,8 +510,18 @@ public static ErrorData OnRestoring(
 <!--Model_Validator_ShowProfilesAndHasPrivilege-->
 
     return Permissions.CanManageTenant(context: context)
-        ? new ErrorData(type: Error.Types.None)
-        : new ErrorData(type: Error.Types.HasNotPermission);
+        ? new ErrorData(
+            context: context,
+            type: Error.Types.None,
+            api: api,
+            sysLogsStatus: 200,
+            sysLogsDescription: Debugs.GetSysLogsDescription())
+        : new ErrorData(
+            context: context,
+            type: Error.Types.HasNotPermission,
+            api: api,
+            sysLogsStatus: 403,
+            sysLogsDescription: Debugs.GetSysLogsDescription());
 }
 
 public static ErrorData OnImporting(
@@ -331,10 +536,25 @@ public static ErrorData OnImporting(
 <!--Model_Validator_ShowProfilesAndHasPrivilege-->
 
     return context.CanImport(ss: ss)
-        ? new ErrorData(type: Error.Types.None)
+        ? new ErrorData(
+            context: context,
+            type: Error.Types.None,
+            api: api,
+            sysLogsStatus: 200,
+            sysLogsDescription: Debugs.GetSysLogsDescription())
         : !context.CanRead(ss: ss)
-            ? new ErrorData(type: Error.Types.NotFound)
-            : new ErrorData(type: Error.Types.HasNotPermission);
+            ? new ErrorData(
+                context: context,
+                type: Error.Types.NotFound,
+                api: api,
+                sysLogsStatus: 403,
+                sysLogsDescription: Debugs.GetSysLogsDescription())
+            : new ErrorData(
+                context: context,
+                type: Error.Types.HasNotPermission,
+                api: api,
+                sysLogsStatus: 403,
+                sysLogsDescription: Debugs.GetSysLogsDescription());
 }
 
 public static ErrorData OnExporting(
@@ -348,10 +568,25 @@ public static ErrorData OnExporting(
 <!--Model_Validator_ShowProfilesAndHasPrivilege-->
 
     return context.CanExport(ss: ss)
-        ? new ErrorData(type: Error.Types.None)
+        ? new ErrorData(
+            context: context,
+            type: Error.Types.None,
+            api: api,
+            sysLogsStatus: 200,
+            sysLogsDescription: Debugs.GetSysLogsDescription())
         : !context.CanRead(ss: ss)
-            ? new ErrorData(type: Error.Types.NotFound)
-            : new ErrorData(type: Error.Types.HasNotPermission);
+            ? new ErrorData(
+                context: context,
+                type: Error.Types.NotFound,
+                api: api,
+                sysLogsStatus: 403,
+                sysLogsDescription: Debugs.GetSysLogsDescription())
+            : new ErrorData(
+                context: context,
+                type: Error.Types.HasNotPermission,
+                api: api,
+                sysLogsStatus: 403,
+                sysLogsDescription: Debugs.GetSysLogsDescription());
 }
 
 <!--Model_Validator_OnDeleteHistory-->
