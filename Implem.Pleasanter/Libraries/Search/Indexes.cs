@@ -1,4 +1,6 @@
-﻿using Implem.DefinitionAccessor;
+﻿using DocumentFormat.OpenXml.Drawing.Diagrams;
+using DocumentFormat.OpenXml.Office2021.MipLabelMetaData;
+using Implem.DefinitionAccessor;
 using Implem.IRds;
 using Implem.Libraries.DataSources.SqlServer;
 using Implem.Libraries.Utilities;
@@ -388,6 +390,8 @@ namespace Implem.Pleasanter.Libraries.Search
                     if (dataRow != null)
                     {
                         var href = string.Empty;
+                        var highlightSplitedBody = dataRow.String("Body").Split(text);
+                        var highlightSplitedTitle = dataRow.String("Title").Split(text);
                         switch (referenceType)
                         {
                             case "Sites":
@@ -416,9 +420,31 @@ namespace Implem.Pleasanter.Libraries.Search
                                 .H(number: 3, action: () => hb
                                      .A(
                                          href: href,
-                                         text: dataRow.String("Title")))
-                                .P(action: () => hb
-                                    .Text(text: dataRow.String("Body"))));
+                                         action: () =>
+                                         {
+                                             hb.Text(highlightSplitedTitle[0]);
+                                             for (int i = 1; i < highlightSplitedTitle.Length; i++)
+                                             {
+                                                 hb.Span(
+                                                     css: "highlight",
+                                                     action: () => hb
+                                                         .Text(text)
+                                                  )
+                                                 .Text(highlightSplitedTitle[i]);
+                                             }
+                                         }))
+                                .P(action: () => {
+                                    hb.Text(highlightSplitedBody[0]);
+                                    for(int i = 1; i < highlightSplitedBody.Length; i++)
+                                    {
+                                        hb.Span(
+                                            css: "highlight",
+                                            action: () => hb
+                                                .Text(text)
+                                         )
+                                        .Text(highlightSplitedBody[i]);
+                                    }
+                                }));
                     }
                 });
             }
