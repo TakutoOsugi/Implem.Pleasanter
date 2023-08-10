@@ -1,9 +1,10 @@
-﻿$p.showPassword = function () {
-    if ($('#Users_Password').attr('type') === 'password') {
-        $('#Users_Password').attr('type', 'text');
-        $('#show_password').text('visibility_off');
+﻿$p.showPassword = function (element) {
+    var passwordElement = $(element).parent().children('input');
+    if (passwordElement.attr('type') === 'password') {
+        passwordElement.attr('type', 'text');
+        $(element).text('visibility_off');
     } else {
-        $('#Users_Password').attr('type', 'password');
-        $('#show_password').text('visibility');
+        passwordElement.attr('type', 'password');
+        $(element).text('visibility');
     }
 }

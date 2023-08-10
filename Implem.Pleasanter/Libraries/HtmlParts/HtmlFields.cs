@@ -1244,12 +1244,15 @@ namespace Implem.Pleasanter.Libraries.HtmlParts
                         if (textType == HtmlTypes.TextTypes.Password)
                         {
                             hb.Div(
-                                id: "show_password",
-                            attributes: new HtmlAttributes()
-                                .Class("material-symbols-outlined show-password")
-                                .OnClick("$p.showPassword()"),
-                            action: () => hb.Text("visibility"));
-                        }
+                                attributes: new HtmlAttributes()
+                                    .Class("material-symbols-outlined show-password show_password")
+                                    .OnClick("$p.showPassword(this)"),
+                                action: () => hb.Text("visibility"));
+                        };
+                        hb.Span(
+                            css: "unit",
+                            _using: !unit.IsNullOrEmpty(),
+                            action: () => hb.Text(unit));
                     })
                 : hb;
         }
