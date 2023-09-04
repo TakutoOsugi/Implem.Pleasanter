@@ -161,6 +161,8 @@ namespace Implem.Pleasanter.Libraries.Settings
         public decimal? LocalFolderTotalLimitSize;
         public int? DateTimeStep;
         [NonSerialized]
+        public bool LowSchemaVersion;
+        [NonSerialized]
         public int? No;
         [NonSerialized]
         public bool Id_Ver;
@@ -1830,6 +1832,24 @@ namespace Implem.Pleasanter.Libraries.Settings
                         case "Method":
                             sql.SysLogs_Method(tableName: path, _as: _as);
                             break;
+                        case "Api":
+                            sql.SysLogs_Api(tableName: path, _as: _as);
+                            break;
+                        case "SiteId":
+                            sql.SysLogs_SiteId(tableName: path, _as: _as);
+                            break;
+                        case "ReferenceId":
+                            sql.SysLogs_ReferenceId(tableName: path, _as: _as);
+                            break;
+                        case "ReferenceType":
+                            sql.SysLogs_ReferenceType(tableName: path, _as: _as);
+                            break;
+                        case "Status":
+                            sql.SysLogs_Status(tableName: path, _as: _as);
+                            break;
+                        case "Description":
+                            sql.SysLogs_Description(tableName: path, _as: _as);
+                            break;
                         case "RequestData":
                             sql.SysLogs_RequestData(tableName: path, _as: _as);
                             break;
@@ -2094,6 +2114,72 @@ namespace Implem.Pleasanter.Libraries.Settings
                             break;
                         case "UpdatedTime":
                             sql.Users_UpdatedTime(tableName: path, _as: _as);
+                            break;
+                        default:
+                            switch (Def.ExtendedColumnTypes.Get(columnName ?? string.Empty))
+                            {
+                                case "Class":
+                                case "Num":
+                                case "Date":
+                                case "Description":
+                                case "Check":
+                                case "Attachments":
+                                    sql.Add(
+                                        columnBracket: $"\"{columnName}\"",
+                                        tableName: path,
+                                        columnName: columnName,
+                                        _as: _as);
+                                break;
+                            }
+                            break;
+                    }
+                    break;
+                case "Dashboards":
+                    switch (columnName)
+                    {
+                        case "SiteId":
+                            sql.Dashboards_SiteId(tableName: path, _as: _as);
+                            break;
+                        case "UpdatedTime":
+                            sql.Dashboards_UpdatedTime(tableName: path, _as: _as);
+                            break;
+                        case "DashboardId":
+                            sql.Dashboards_DashboardId(tableName: path, _as: _as);
+                            break;
+                        case "Ver":
+                            sql.Dashboards_Ver(tableName: path, _as: _as);
+                            break;
+                        case "Body":
+                            sql.Dashboards_Body(tableName: path, _as: _as);
+                            break;
+                        case "Locked":
+                            sql.Dashboards_Locked(tableName: path, _as: _as);
+                            break;
+                        case "Comments":
+                            sql.Dashboards_Comments(tableName: path, _as: _as);
+                            break;
+                        case "Creator":
+                            sql.Dashboards_Creator(tableName: path, _as: _as);
+                            break;
+                        case "Updator":
+                            sql.Dashboards_Updator(tableName: path, _as: _as);
+                            break;
+                        case "CreatedTime":
+                            sql.Dashboards_CreatedTime(tableName: path, _as: _as);
+                            break;
+                        case "TitleBody":
+                            sql.Dashboards_Body(tableName: path, _as: Joined
+                                ? path + ",Body"
+                                : "Body");
+                            goto case "Title";
+                        case "Title":
+                            sql
+                                .Dashboards_Title(tableName: path, _as: _as)
+                                .ItemTitle(
+                                    tableName: path,
+                                    _as: Joined
+                                        ? path + ",ItemTitle"
+                                        : "ItemTitle");
                             break;
                         default:
                             switch (Def.ExtendedColumnTypes.Get(columnName ?? string.Empty))

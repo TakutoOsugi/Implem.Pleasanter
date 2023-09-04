@@ -191,6 +191,7 @@ namespace Implem.Pleasanter.Libraries.Settings
         public SettingList<ServerScript> ServerScripts;
         public SettingList<BulkUpdateColumn> BulkUpdateColumns;
         public SettingList<RelatingColumn> RelatingColumns;
+        public SettingList<DashboardPart> DashboardParts;
         public string ExtendedHeader;
         public Versions.AutoVerUpTypes? AutoVerUpType;
         public bool? AllowEditingComments;
@@ -343,6 +344,7 @@ namespace Implem.Pleasanter.Libraries.Settings
             if (ServerScripts == null) ServerScripts = new SettingList<ServerScript>();
             if (BulkUpdateColumns == null) BulkUpdateColumns = new SettingList<BulkUpdateColumn>();
             if (RelatingColumns == null) RelatingColumns = new SettingList<RelatingColumn>();
+            if (DashboardParts == null) DashboardParts = new SettingList<DashboardPart>();
             AutoVerUpType = AutoVerUpType ?? Versions.AutoVerUpTypes.Default;
             AllowEditingComments = AllowEditingComments ?? false;
             AllowCopy = AllowCopy ?? Parameters.General.AllowCopy;
@@ -389,24 +391,15 @@ namespace Implem.Pleasanter.Libraries.Settings
 
         public void SetLinkedSiteSettings(
             Context context,
-            Dictionary<long, DataRow> siteDataRows = null,
             Dictionary<long, SiteSettings> joinedSsHash = null,
             bool destinations = true,
             bool sources = true,
-            List<long> previously = null,
-            bool recursion = false)
+            List<long> previously = null)
         {
             if ((!destinations || Destinations != null) && (!sources || Sources != null))
             {
                 return;
             }
-            siteDataRows = siteDataRows ?? SiteInfo.Sites(context: context);
-            var nextPreviously = new List<long>();
-            if (previously != null)
-            {
-                nextPreviously.AddRange(nextPreviously);
-            }
-            nextPreviously.Add(SiteId);
             if (joinedSsHash == null)
             {
                 joinedSsHash = new Dictionary<long, SiteSettings>()
@@ -420,24 +413,20 @@ namespace Implem.Pleasanter.Libraries.Settings
                 Destinations = SiteSettingsList(
                     context: context,
                     direction: "Destinations",
-                    siteDataRows: siteDataRows,
                     joinedSsHash: joinedSsHash,
                     joinStacks: JoinStacks,
                     links: Links,
-                    previously: nextPreviously,
-                    recursion: recursion);
+                    previously: previously);
             }
             if (sources)
             {
                 Sources = SiteSettingsList(
                     context: context,
                     direction: "Sources",
-                    siteDataRows: siteDataRows,
                     joinedSsHash: joinedSsHash,
                     joinStacks: JoinStacks,
                     links: Links,
-                    previously: nextPreviously,
-                    recursion: recursion);
+                    previously: previously);
             }
             if (destinations && sources)
             {
@@ -448,28 +437,43 @@ namespace Implem.Pleasanter.Libraries.Settings
         private Dictionary<long, SiteSettings> SiteSettingsList(
             Context context,
             string direction,
-            Dictionary<long, DataRow> siteDataRows,
             Dictionary<long, SiteSettings> joinedSsHash,
             List<JoinStack> joinStacks,
             List<Link> links,
             List<long> previously,
-            bool recursion)
+            Dictionary<long, DataSet> cache = null)
         {
-            var siteSettingsList = new Dictionary<long, SiteSettings>();
+            var hash = new Dictionary<long, SiteSettings>();
             var linkIds = direction == "Destinations"
                 ? SiteInfo.Links(context: context)?.SourceKeyValues.Get(SiteId)
                 : SiteInfo.Links(context: context)?.DestinationKeyValues.Get(SiteId);
-            if (linkIds == null) return siteSettingsList;
-            linkIds
-                .Select(linkId => GetSiteSettingsFromDataRow(
-                    context: context,
-                    siteDataRows: siteDataRows,
-                    linkId: linkId))
-                .Where(ss => ss != null)
-                .Where(ss => !previously.Contains(ss.SiteId)
-                    || (!recursion && SiteId == ss.SiteId))
-                .ForEach(ss =>
+            if (linkIds == null) return hash;
+            SiteInfo.Sites(context: context)
+                .Where(o => linkIds?.Any(siteId => siteId == o.Key) == true)
+                .Select(o => o.Value)
+                .Where(dataRow => previously?.Contains(dataRow.Long("SiteId")) != true)
+                .ToList()
+                .ForEach(dataRow =>
                 {
+                    var ss = SiteSettingsUtilities.Get(context: context, dataRow: dataRow);
+                    ss.SiteId = dataRow.Long("SiteId");
+                    ss.Title = dataRow.String("Title");
+                    ss.Body = dataRow.String("Body");
+                    ss.GridGuide = dataRow.String("GridGuide");
+                    ss.EditorGuide = dataRow.String("EditorGuide");
+                    ss.CalendarGuide = dataRow.String("CalendarGuide");
+                    ss.CrosstabGuide = dataRow.String("CrosstabGuide");
+                    ss.GanttGuide = dataRow.String("GanttGuide");
+                    ss.BurnDownGuide = dataRow.String("BurnDownGuide");
+                    ss.TimeSeriesGuide = dataRow.String("TimeSeriesGuide");
+                    ss.KambanGuide = dataRow.String("KambanGuide");
+                    ss.ImageLibGuide = dataRow.String("ImageLibGuide");
+                    ss.ReferenceType = dataRow.String("ReferenceType");
+                    ss.ParentId = dataRow.Long("ParentId");
+                    ss.InheritPermission = dataRow.Long("InheritPermission");
+                    ss.Linked = true;
+                    if (previously == null) previously = new List<long>();
+                    previously.Add(ss.SiteId);
                     switch (direction)
                     {
                         case "Destinations":
@@ -490,8 +494,7 @@ namespace Implem.Pleasanter.Libraries.Settings
                                 joinedSsHash: joinedSsHash,
                                 destinations: true,
                                 sources: false,
-                                previously: previously,
-                                recursion: SiteId == ss.SiteId);
+                                previously: previously);
                             break;
                         case "Sources":
                             ss.Links
@@ -511,49 +514,16 @@ namespace Implem.Pleasanter.Libraries.Settings
                                 joinedSsHash: joinedSsHash,
                                 destinations: false,
                                 sources: true,
-                                previously: previously,
-                                recursion: SiteId == ss.SiteId);
+                                previously: previously);
                             break;
                     }
-                    siteSettingsList.Add(ss.SiteId, ss);
+                    hash.Add(ss.SiteId, ss);
                     if (!joinedSsHash.ContainsKey(ss.SiteId))
                     {
                         joinedSsHash.Add(ss.SiteId, ss);
                     }
                 });
-            return siteSettingsList;
-        }
-
-        private SiteSettings GetSiteSettingsFromDataRow(
-            Context context,
-            Dictionary<long, DataRow> siteDataRows,
-            long linkId)
-        {
-            var dataRow = siteDataRows.Get(linkId);
-            if (dataRow != null)
-            {
-                var ss = SiteSettingsUtilities.Get(
-                    context: context,
-                    dataRow: dataRow);
-                ss.SiteId = dataRow.Long("SiteId");
-                ss.Title = dataRow.String("Title");
-                ss.Body = dataRow.String("Body");
-                ss.GridGuide = dataRow.String("GridGuide");
-                ss.EditorGuide = dataRow.String("EditorGuide");
-                ss.CalendarGuide = dataRow.String("CalendarGuide");
-                ss.CrosstabGuide = dataRow.String("CrosstabGuide");
-                ss.GanttGuide = dataRow.String("GanttGuide");
-                ss.BurnDownGuide = dataRow.String("BurnDownGuide");
-                ss.TimeSeriesGuide = dataRow.String("TimeSeriesGuide");
-                ss.KambanGuide = dataRow.String("KambanGuide");
-                ss.ImageLibGuide = dataRow.String("ImageLibGuide");
-                ss.ReferenceType = dataRow.String("ReferenceType");
-                ss.ParentId = dataRow.Long("ParentId");
-                ss.InheritPermission = dataRow.Long("InheritPermission");
-                ss.Linked = true;
-                return ss;
-            }
-            return null;
+            return hash;
         }
 
         public void SetPermissions(Context context, long referenceId)
@@ -664,6 +634,21 @@ namespace Implem.Pleasanter.Libraries.Settings
                     return true;
                 default:
                     return false;
+            }
+        }
+
+        public bool IsDashboardEditor(Context context)
+        {
+            if (ReferenceType != "Dashboards")
+            {
+                return false;
+            }
+            switch (context.Action)
+            {
+                case "index":
+                    return false;
+                default:
+                    return true;
             }
         }
 
@@ -1111,6 +1096,14 @@ namespace Implem.Pleasanter.Libraries.Settings
                     ss.RelatingColumns = new SettingList<RelatingColumn>();
                 }
                 ss.RelatingColumns.Add(relatingColumn.GetRecordingData());
+            });
+            DashboardParts?.ForEach(dashboards =>
+            {
+                if(ss.DashboardParts == null)
+                {
+                    ss.DashboardParts = new SettingList<DashboardPart>();
+                }
+                ss.DashboardParts.Add(dashboards.GetRecordingData(context: context));
             });
             if (!ExtendedHeader.IsNullOrEmpty())
             {
@@ -1659,7 +1652,10 @@ namespace Implem.Pleasanter.Libraries.Settings
 
         private void UpdateColumnDefinitionHash()
         {
-            ColumnDefinitionHash = GetColumnDefinitionHash(ReferenceType);
+            ColumnDefinitionHash = GetColumnDefinitionHash(
+                ReferenceType == "Dashboards"
+                    ? "Issues"
+                    : ReferenceType);
         }
 
         private static Dictionary<string, ColumnDefinition> GetColumnDefinitionHash(
@@ -1835,6 +1831,7 @@ namespace Implem.Pleasanter.Libraries.Settings
             if (column != null)
             {
                 column.Id = column.Id ?? columnDefinition.Id;
+                column.LowSchemaVersion = columnDefinition.LowSchemaVersion();
                 column.No = columnDefinition.No;
                 column.Id_Ver =
                     ((columnDefinition.Unique || columnDefinition.Pk > 0)
@@ -2002,6 +1999,7 @@ namespace Implem.Pleasanter.Libraries.Settings
                 .GroupBy(o => o.ColumnName)
                 .Select(o => o.First())
                 .Where(o => ColumnDefinitionHash?.ContainsKey(o?.Name ?? string.Empty) == true)
+                .Where(o => !o.LowSchemaVersion)
                 .ToDictionary(o => o.ColumnName, o => o);
         }
 
@@ -2752,10 +2750,12 @@ namespace Implem.Pleasanter.Libraries.Settings
             return hash;
         }
 
-        public Dictionary<string, string> ViewSorterOptions(Context context)
+        public Dictionary<string, string> ViewSorterOptions(
+            Context context,
+            bool currentTableOnly = false)
         {
             var hash = new Dictionary<string, string>();
-            JoinOptions().ForEach(join =>
+            JoinOptions(currentTableOnly: currentTableOnly).ForEach(join =>
             {
                 var siteId = ColumnUtilities.GetSiteIdByTableAlias(join.Key, SiteId);
                 var ss = JoinedSsHash.Get(siteId);
@@ -4411,7 +4411,7 @@ namespace Implem.Pleasanter.Libraries.Settings
                 .Sites_SiteId(link.SiteId)
                 .SearchTextWhere(
                     context: context,
-                    ss: Destinations?.Get(link.SiteId),
+                    ss: JoinedSsHash?.Get(link.SiteId),
                     searchText: searchIndexes?.Join(" "))
                 .CanRead(
                     context: context,
@@ -4527,6 +4527,21 @@ namespace Implem.Pleasanter.Libraries.Settings
                             return new Column()
                             {
                                 ColumnName = "Groups",
+                                TypeName = "nvarchar",
+                                ControlType = "ChoicesText",
+                                ChoicesText = "HasChoices"
+                            };
+                        default:
+                            break;
+                    }
+                    break;
+                case "Groups":
+                    switch (columnName)
+                    {
+                        case "GroupMembers":
+                            return new Column()
+                            {
+                                ColumnName = "GroupMembers",
                                 TypeName = "nvarchar",
                                 ControlType = "ChoicesText",
                                 ChoicesText = "HasChoices"
@@ -5038,7 +5053,8 @@ namespace Implem.Pleasanter.Libraries.Settings
         {
             return !IsSiteEditor(context: context)
                 ? Styles?
-                    .Where(style => peredicate(style))
+                    .Where(style =>style.Disabled != true
+                        && peredicate(style))
                     .Select(o => o.Body).Join("\n")
                 : null;
         }
@@ -5093,7 +5109,8 @@ namespace Implem.Pleasanter.Libraries.Settings
         {
             return !IsSiteEditor(context: context)
                 ? Scripts?
-                    .Where(script => peredicate(script))
+                    .Where(script => script.Disabled != true
+                        && peredicate(script))
                     .Select(o => o.Body).Join("\n")
                 : null;
         }

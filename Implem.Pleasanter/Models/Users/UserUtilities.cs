@@ -3569,7 +3569,7 @@ namespace Implem.Pleasanter.Models
                 ? error.MessageJson(context: context)
                 : userModel.Allow(
                     context: context,
-                    returnUrl: userModel.GetReturnUrl(returnUrl: context.Forms.Data("ReturnUrl")),
+                    returnUrl: context.Forms.Data("ReturnUrl"),
                     atLogin: true);
         }
 
@@ -4608,11 +4608,18 @@ namespace Implem.Pleasanter.Models
                     context: context,
                     errorData: invalid);
             }
+            if (Parameters.Security.JoeAccountCheck
+                && (context.RequestDataString.Deserialize<UserApiModel>()?.Password ?? string.Empty) == userModel.LoginId)
+            {
+                return ApiResults.Error(
+                    context: context,
+                    errorData: new ErrorData(type: Error.Types.JoeAccountCheck));
+            }
             if (!Parameters.Security.DisableCheckPasswordPolicyIfApi)
             {
                 foreach (var policy in Parameters.Security.PasswordPolicies.Where(o => o.Enabled))
                 {
-                    if (!(context.RequestDataString.Deserialize<UserApiModel>().Password ?? "").RegexExists(policy.Regex))
+                    if (!(context.RequestDataString.Deserialize<UserApiModel>()?.Password ?? string.Empty).RegexExists(policy.Regex))
                     {
                         return ApiResults.Error(
                             context: context,
@@ -4684,17 +4691,39 @@ namespace Implem.Pleasanter.Models
                        context: context,
                        errorData: invalid);
             }
+            if (Parameters.Security.JoeAccountCheck
+                && (context.RequestDataString.Deserialize<UserApiModel>()?.Password ?? string.Empty) == userModel.LoginId)
+            {
+                return ApiResults.Error(
+                    context: context,
+                    errorData: new ErrorData(type: Error.Types.JoeAccountCheck));
+            }
             if (!Parameters.Security.DisableCheckPasswordPolicyIfApi)
             {
                 foreach (var policy in Parameters.Security.PasswordPolicies.Where(o => o.Enabled))
                 {
-                    if (userModel.Password_Updated(context: context) && !userModel.Password.RegexExists(policy.Regex))
+                    if (userModel.Password_Updated(context: context) && !(context.RequestDataString.Deserialize<UserApiModel>()?.Password ?? string.Empty).RegexExists(policy.Regex))
                     {
                         return ApiResults.Error(
                             context: context,
                             errorData: new ErrorData(type: Error.Types.PasswordPolicyViolation));
                     }
                 }
+            }
+            if (!(context.RequestDataString.Deserialize<UserApiModel>()?.Password).IsNullOrEmpty())
+            {
+                userModel.ChangedPassword = (context.RequestDataString.Deserialize<UserApiModel>()?.Password ?? string.Empty).Sha512Cng();
+                var error = userModel.ChangePassword(context: context);
+                if (error.Has())
+                {
+                    return ApiResults.Error(
+                        context: context,
+                        errorData: new ErrorData(type: error));
+                }
+                userModel.SetByApi(
+                    context: context,
+                    ss: ss,
+                    data: userApiModel);
             }
             foreach (var column in ss.Columns
                 .Where(o => o.ValidateRequired ?? false)

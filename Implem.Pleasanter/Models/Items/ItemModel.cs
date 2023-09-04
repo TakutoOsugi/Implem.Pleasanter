@@ -41,52 +41,76 @@ namespace Implem.Pleasanter.Models
         public string SavedFullText = string.Empty;
         public DateTime SavedSearchIndexCreatedTime = 0.ToDateTime();
 
-        public bool ReferenceId_Updated(Context context, Column column = null)
+        public bool ReferenceId_Updated(Context context, bool copy = false, Column column = null)
         {
-            return ReferenceId != SavedReferenceId &&
-                (column == null ||
-                column.DefaultInput.IsNullOrEmpty() ||
-                column.GetDefaultInput(context: context).ToLong() != ReferenceId);
+            if (copy && column?.CopyByDefault == true)
+            {
+                return column.GetDefaultInput(context: context).ToLong() != ReferenceId;
+            }
+            return ReferenceId != SavedReferenceId
+                &&  (column == null
+                    || column.DefaultInput.IsNullOrEmpty()
+                    || column.GetDefaultInput(context: context).ToLong() != ReferenceId);
         }
 
-        public bool ReferenceType_Updated(Context context, Column column = null)
+        public bool ReferenceType_Updated(Context context, bool copy = false, Column column = null)
         {
-            return ReferenceType != SavedReferenceType && ReferenceType != null &&
-                (column == null ||
-                column.DefaultInput.IsNullOrEmpty() ||
-                column.GetDefaultInput(context: context).ToString() != ReferenceType);
+            if (copy && column?.CopyByDefault == true)
+            {
+                return column.GetDefaultInput(context: context).ToString() != ReferenceType;
+            }
+            return ReferenceType != SavedReferenceType && ReferenceType != null
+                &&  (column == null
+                    || column.DefaultInput.IsNullOrEmpty()
+                    || column.GetDefaultInput(context: context).ToString() != ReferenceType);
         }
 
-        public bool SiteId_Updated(Context context, Column column = null)
+        public bool SiteId_Updated(Context context, bool copy = false, Column column = null)
         {
-            return SiteId != SavedSiteId &&
-                (column == null ||
-                column.DefaultInput.IsNullOrEmpty() ||
-                column.GetDefaultInput(context: context).ToLong() != SiteId);
+            if (copy && column?.CopyByDefault == true)
+            {
+                return column.GetDefaultInput(context: context).ToLong() != SiteId;
+            }
+            return SiteId != SavedSiteId
+                &&  (column == null
+                    || column.DefaultInput.IsNullOrEmpty()
+                    || column.GetDefaultInput(context: context).ToLong() != SiteId);
         }
 
-        public bool Title_Updated(Context context, Column column = null)
+        public bool Title_Updated(Context context, bool copy = false, Column column = null)
         {
-            return Title != SavedTitle && Title != null &&
-                (column == null ||
-                column.DefaultInput.IsNullOrEmpty() ||
-                column.GetDefaultInput(context: context).ToString() != Title);
+            if (copy && column?.CopyByDefault == true)
+            {
+                return column.GetDefaultInput(context: context).ToString() != Title;
+            }
+            return Title != SavedTitle && Title != null
+                &&  (column == null
+                    || column.DefaultInput.IsNullOrEmpty()
+                    || column.GetDefaultInput(context: context).ToString() != Title);
         }
 
-        public bool FullText_Updated(Context context, Column column = null)
+        public bool FullText_Updated(Context context, bool copy = false, Column column = null)
         {
-            return FullText != SavedFullText && FullText != null &&
-                (column == null ||
-                column.DefaultInput.IsNullOrEmpty() ||
-                column.GetDefaultInput(context: context).ToString() != FullText);
+            if (copy && column?.CopyByDefault == true)
+            {
+                return column.GetDefaultInput(context: context).ToString() != FullText;
+            }
+            return FullText != SavedFullText && FullText != null
+                &&  (column == null
+                    || column.DefaultInput.IsNullOrEmpty()
+                    || column.GetDefaultInput(context: context).ToString() != FullText);
         }
 
-        public bool SearchIndexCreatedTime_Updated(Context context, Column column = null)
+        public bool SearchIndexCreatedTime_Updated(Context context, bool copy = false, Column column = null)
         {
-            return SearchIndexCreatedTime != SavedSearchIndexCreatedTime &&
-                (column == null ||
-                column.DefaultInput.IsNullOrEmpty() ||
-                column.DefaultTime(context: context).Date != SearchIndexCreatedTime.Date);
+            if (copy && column?.CopyByDefault == true)
+            {
+                return column.GetDefaultInput(context: context).ToDateTime() != SearchIndexCreatedTime;
+            }
+            return SearchIndexCreatedTime != SavedSearchIndexCreatedTime
+                && (column == null
+                    || column.DefaultInput.IsNullOrEmpty()
+                    || column.DefaultTime(context: context).Date != SearchIndexCreatedTime.Date);
         }
 
         public ItemModel(
@@ -197,7 +221,11 @@ namespace Implem.Pleasanter.Models
             {
                 return HtmlTemplates.Error(
                     context: context,
-                    errorData: new ErrorData(type: Error.Types.NotFound));
+                    errorData: new ErrorData(
+                        context: context,
+                        type: Error.Types.NotFound,
+                        sysLogsStatus: 404,
+                        sysLogsDescription: Debugs.GetSysLogsDescription()));
             }
             SetSite(
                 context: context,
@@ -208,6 +236,10 @@ namespace Implem.Pleasanter.Models
             {
                 case "Sites":
                     return SiteUtilities.SiteMenu(context: context, siteModel: Site);
+                case "Dashboards":
+                    return DashboardUtilities.Index(
+                        context: context,
+                        ss: Site.SiteSettings);
                 case "Issues":
                     return IssueUtilities.Index(
                         context: context,
@@ -219,7 +251,11 @@ namespace Implem.Pleasanter.Models
                 default:
                     return HtmlTemplates.Error(
                         context: context,
-                        errorData: new ErrorData(type: Error.Types.NotFound));
+                        errorData: new ErrorData(
+                            context: context,
+                            type: Error.Types.NotFound,
+                            sysLogsStatus: 404,
+                            sysLogsDescription: Debugs.GetSysLogsDescription()));
             }
         }
 
@@ -255,7 +291,11 @@ namespace Implem.Pleasanter.Models
             {
                 return HtmlTemplates.Error(
                     context: context,
-                    errorData: new ErrorData(type: Error.Types.NotFound));
+                    errorData: new ErrorData(
+                        context: context,
+                        type: Error.Types.NotFound,
+                        sysLogsStatus: 404,
+                        sysLogsDescription: Debugs.GetSysLogsDescription()));
             }
             SetSite(
                 context: context,
@@ -269,7 +309,11 @@ namespace Implem.Pleasanter.Models
                 {
                     return HtmlTemplates.Error(
                         context: context,
-                        errorData: new ErrorData(type: Error.Types.NotFound));
+                        errorData: new ErrorData(
+                            context: context,
+                            type: Error.Types.NotFound,
+                            sysLogsStatus: 404,
+                            sysLogsDescription: Debugs.GetSysLogsDescription()));
                 }
                 return SiteUtilities.TrashBox(
                     context: context,
@@ -279,12 +323,20 @@ namespace Implem.Pleasanter.Models
             {
                 return HtmlTemplates.Error(
                     context: context,
-                    errorData: new ErrorData(type: Error.Types.NotFound));
+                    errorData: new ErrorData(
+                        context: context,
+                        type: Error.Types.NotFound,
+                        sysLogsStatus: 404,
+                        sysLogsDescription: Debugs.GetSysLogsDescription()));
             }
             switch (Site.ReferenceType)
             {
                 case "Sites":
                     return SiteUtilities.TrashBox(
+                        context: context,
+                        ss: Site.SiteSettings);
+                case "Dashboards":
+                    return DashboardUtilities.TrashBox(
                         context: context,
                         ss: Site.SiteSettings);
                 case "Issues":
@@ -298,7 +350,11 @@ namespace Implem.Pleasanter.Models
                 default:
                     return HtmlTemplates.Error(
                         context: context,
-                        errorData: new ErrorData(type: Error.Types.NotFound));
+                        errorData: new ErrorData(
+                            context: context,
+                            type: Error.Types.NotFound,
+                            sysLogsStatus: 404,
+                            sysLogsDescription: Debugs.GetSysLogsDescription()));
             }
         }
 
@@ -332,6 +388,10 @@ namespace Implem.Pleasanter.Models
             {
                 case "Sites":
                     return SiteUtilities.TrashBoxJson(
+                        context: context,
+                        ss: Site.SiteSettings);
+                case "Dashboards":
+                    return DashboardUtilities.TrashBoxJson(
                         context: context,
                         ss: Site.SiteSettings);
                 case "Issues":
@@ -368,7 +428,11 @@ namespace Implem.Pleasanter.Models
                 default:
                     return HtmlTemplates.Error(
                         context: context,
-                        errorData: new ErrorData(type: Error.Types.NotFound));
+                        errorData: new ErrorData(
+                            context: context,
+                            type: Error.Types.NotFound,
+                            sysLogsStatus: 404,
+                            sysLogsDescription: Debugs.GetSysLogsDescription()));
             }
         }
 
@@ -416,7 +480,11 @@ namespace Implem.Pleasanter.Models
                 default:
                     return HtmlTemplates.Error(
                         context: context,
-                        errorData: new ErrorData(type: Error.Types.NotFound));
+                        errorData: new ErrorData(
+                            context: context,
+                            type: Error.Types.NotFound,
+                            sysLogsStatus: 404,
+                            sysLogsDescription: Debugs.GetSysLogsDescription()));
             }
         }
 
@@ -460,7 +528,11 @@ namespace Implem.Pleasanter.Models
                 default:
                     return HtmlTemplates.Error(
                         context: context,
-                        errorData: new ErrorData(type: Error.Types.NotFound));
+                        errorData: new ErrorData(
+                            context: context,
+                            type: Error.Types.NotFound,
+                            sysLogsStatus: 404,
+                            sysLogsDescription: Debugs.GetSysLogsDescription()));
             }
         }
 
@@ -500,7 +572,11 @@ namespace Implem.Pleasanter.Models
                 default:
                     return HtmlTemplates.Error(
                         context: context,
-                        errorData: new ErrorData(type: Error.Types.NotFound));
+                        errorData: new ErrorData(
+                            context: context,
+                            type: Error.Types.NotFound,
+                            sysLogsStatus: 404,
+                            sysLogsDescription: Debugs.GetSysLogsDescription()));
             }
         }
 
@@ -562,7 +638,11 @@ namespace Implem.Pleasanter.Models
                 default:
                     return HtmlTemplates.Error(
                         context: context,
-                        errorData: new ErrorData(type: Error.Types.NotFound));
+                        errorData: new ErrorData(
+                            context: context,
+                            type: Error.Types.NotFound,
+                            sysLogsStatus: 404,
+                            sysLogsDescription: Debugs.GetSysLogsDescription()));
             }
         }
 
@@ -610,7 +690,11 @@ namespace Implem.Pleasanter.Models
                 default:
                     return HtmlTemplates.Error(
                         context: context,
-                        errorData: new ErrorData(type: Error.Types.NotFound));
+                        errorData: new ErrorData(
+                            context: context,
+                            type: Error.Types.NotFound,
+                            sysLogsStatus: 404,
+                            sysLogsDescription: Debugs.GetSysLogsDescription()));
             }
         }
 
@@ -658,7 +742,11 @@ namespace Implem.Pleasanter.Models
                 default:
                     return HtmlTemplates.Error(
                         context: context,
-                        errorData: new ErrorData(type: Error.Types.NotFound));
+                        errorData: new ErrorData(
+                            context: context,
+                            type: Error.Types.NotFound,
+                            sysLogsStatus: 404,
+                            sysLogsDescription: Debugs.GetSysLogsDescription()));
             }
         }
 
@@ -708,7 +796,11 @@ namespace Implem.Pleasanter.Models
                 default:
                     return HtmlTemplates.Error(
                         context: context,
-                        errorData: new ErrorData(type: Error.Types.NotFound));
+                        errorData: new ErrorData(
+                            context: context,
+                            type: Error.Types.NotFound,
+                            sysLogsStatus: 404,
+                            sysLogsDescription: Debugs.GetSysLogsDescription()));
             }
         }
 
@@ -758,7 +850,11 @@ namespace Implem.Pleasanter.Models
                     default:
                         return HtmlTemplates.Error(
                             context: context,
-                            errorData: new ErrorData(type: Error.Types.NotFound));
+                            errorData: new ErrorData(
+                                context: context,
+                                type: Error.Types.NotFound,
+                                sysLogsStatus: 404,
+                                sysLogsDescription: Debugs.GetSysLogsDescription()));
                 }
             }
         }
@@ -782,7 +878,11 @@ namespace Implem.Pleasanter.Models
                 default:
                     return HtmlTemplates.Error(
                         context: context,
-                        errorData: new ErrorData(type: Error.Types.NotFound));
+                        errorData: new ErrorData(
+                            context: context,
+                            type: Error.Types.NotFound,
+                            sysLogsStatus: 404,
+                            sysLogsDescription: Debugs.GetSysLogsDescription()));
             }
         }
 
@@ -842,7 +942,11 @@ namespace Implem.Pleasanter.Models
                 default:
                     return HtmlTemplates.Error(
                         context: context,
-                        errorData: new ErrorData(type: Error.Types.NotFound));
+                        errorData: new ErrorData(
+                            context: context,
+                            type: Error.Types.NotFound,
+                            sysLogsStatus: 404,
+                            sysLogsDescription: Debugs.GetSysLogsDescription()));
             }
         }
 
@@ -1262,7 +1366,8 @@ namespace Implem.Pleasanter.Models
         {
             SetSite(
                 context: context,
-                initSiteSettings: true);
+                initSiteSettings: true,
+                setSiteIntegration: true);
             if (!Site.WithinApiLimits(context: context))
             {
                 return ApiResults.Get(ApiResponses.OverLimitApi(
@@ -1309,7 +1414,10 @@ namespace Implem.Pleasanter.Models
 
         public BaseItemModel[] GetByServerScript(Context context)
         {
-            SetSite(context: context);
+            SetSite(
+                context: context,
+                initSiteSettings: true,
+                setSiteIntegration: true);
             if (!Site.WithinApiLimits(context: context))
             {
                 return null;
@@ -1789,35 +1897,6 @@ namespace Implem.Pleasanter.Models
             }
         }
 
-        public ContentResultInheritance UpsertByApi(Context context, string referenceType = null)
-        {
-            SetSite(
-                context: context,
-                initSiteSettings: true);
-            if (!Site.WithinApiLimits(context: context))
-            {
-                return ApiResults.Get(ApiResponses.OverLimitApi(
-                    context: context,
-                    siteId: Site.SiteId,
-                    limitPerSite: context.ContractSettings.ApiLimit()));
-            }
-            switch (referenceType ?? Site.ReferenceType)
-            {
-                case "Issues":
-                    return IssueUtilities.UpsertByApi(
-                        context: context,
-                        ss: Site.SiteSettings,
-                        previousTitle: Title);
-                case "Results":
-                    return ResultUtilities.UpsertByApi(
-                        context: context,
-                        ss: Site.SiteSettings,
-                        previousTitle: Title);
-                default:
-                    return ApiResults.Get(ApiResponses.NotFound(context: context));
-            }
-        }
-
         public bool UpdateByServerScript(Context context, object model)
         {
             SetSite(context: context);
@@ -1854,11 +1933,11 @@ namespace Implem.Pleasanter.Models
                     var issueSs = Site.IssuesSiteSettings(
                         context: context,
                         referenceId: ReferenceId);
-                    if(model is string issueRequestString)
+                    if (model is string issueRequestString)
                     {
                         context.ApiRequestBody = issueRequestString;
                     }
-                    else if(model is ServerScriptModelApiModel issueApiModel)
+                    else if (model is ServerScriptModelApiModel issueApiModel)
                     {
                         context.ApiRequestBody = issueApiModel.ToJsonString(
                             context: context,
@@ -1878,11 +1957,11 @@ namespace Implem.Pleasanter.Models
                     var resultSs = Site.ResultsSiteSettings(
                         context: context,
                         referenceId: ReferenceId);
-                    if(model is string resultRequestString)
+                    if (model is string resultRequestString)
                     {
                         context.ApiRequestBody = resultRequestString;
                     }
-                    else if(model is ServerScriptModelApiModel resultApiModel)
+                    else if (model is ServerScriptModelApiModel resultApiModel)
                     {
                         context.ApiRequestBody = resultApiModel.ToJsonString(
                             context: context,
@@ -1902,11 +1981,11 @@ namespace Implem.Pleasanter.Models
                     var wikiSs = Site.WikisSiteSettings(
                         context: context,
                         referenceId: ReferenceId);
-                    if(model is string wikiRequestString)
+                    if (model is string wikiRequestString)
                     {
                         context.ApiRequestBody = wikiRequestString;
                     }
-                    else if(model is ServerScriptModelApiModel wikiApiModel)
+                    else if (model is ServerScriptModelApiModel wikiApiModel)
                     {
                         context.ApiRequestBody = wikiApiModel.ToJsonString(
                             context: context,
@@ -1920,6 +1999,95 @@ namespace Implem.Pleasanter.Models
                         context: context,
                         ss: wikiSs,
                         wikiId: ReferenceId,
+                        previousTitle: Title,
+                        model: model);
+                default:
+                    return false;
+            }
+        }
+
+        public ContentResultInheritance UpsertByApi(Context context, string referenceType = null)
+        {
+            SetSite(
+                context: context,
+                initSiteSettings: true);
+            if (!Site.WithinApiLimits(context: context))
+            {
+                return ApiResults.Get(ApiResponses.OverLimitApi(
+                    context: context,
+                    siteId: Site.SiteId,
+                    limitPerSite: context.ContractSettings.ApiLimit()));
+            }
+            switch (referenceType ?? Site.ReferenceType)
+            {
+                case "Issues":
+                    return IssueUtilities.UpsertByApi(
+                        context: context,
+                        ss: Site.SiteSettings,
+                        previousTitle: Title);
+                case "Results":
+                    return ResultUtilities.UpsertByApi(
+                        context: context,
+                        ss: Site.SiteSettings,
+                        previousTitle: Title);
+                default:
+                    return ApiResults.Get(ApiResponses.NotFound(context: context));
+            }
+        }
+
+        public bool UpsertByServerScript(Context context, object model)
+        {
+            SetSite(context: context);
+            if (!Site.WithinApiLimits(context: context))
+            {
+                return false;
+            }
+            switch (Site.ReferenceType)
+            {
+                case "Issues":
+                    var issueSs = Site.IssuesSiteSettings(
+                        context: context,
+                        referenceId: ReferenceId);
+                    if (model is string issueRequestString)
+                    {
+                        context.ApiRequestBody = issueRequestString;
+                    }
+                    else if (model is ServerScriptModelApiModel issueApiModel)
+                    {
+                        context.ApiRequestBody = issueApiModel.ToJsonString(
+                            context: context,
+                            ss: issueSs);
+                    }
+                    else
+                    {
+                        return false;
+                    }
+                    return IssueUtilities.UpsertByServerScript(
+                        context: context,
+                        ss: issueSs,
+                        previousTitle: Title,
+                        model: model);
+                case "Results":
+                    var resultSs = Site.ResultsSiteSettings(
+                        context: context,
+                        referenceId: ReferenceId);
+                    if (model is string resultRequestString)
+                    {
+                        context.ApiRequestBody = resultRequestString;
+                    }
+                    else if (model is ServerScriptModelApiModel resultApiModel)
+                    {
+                        context.ApiRequestBody = resultApiModel.ToJsonString(
+                            context: context,
+                            ss: resultSs);
+                    }
+                    else
+                    {
+                        return false;
+                    }
+                    return ResultUtilities.UpsertByServerScript(
+                        context: context,
+                        ss: resultSs,
                         previousTitle: Title,
                         model: model);
                 default:
@@ -2587,6 +2755,7 @@ namespace Implem.Pleasanter.Models
                 case "Issues":
                 case "Results":
                 case "Wikis":
+                case "Dashboards":
                     return Libraries.SitePackages.Utilities.OpenImportSitePackageDialog(
                         context: context,
                         ss: Site.SiteSettings);
@@ -2610,6 +2779,7 @@ namespace Implem.Pleasanter.Models
                 case "Issues":
                 case "Results":
                 case "Wikis":
+                case "Dashboards":
                 default:
                     throw new NotImplementedException();
             }
@@ -2631,6 +2801,7 @@ namespace Implem.Pleasanter.Models
                 case "Issues":
                 case "Results":
                 case "Wikis":
+                case "Dashboards":
                     return Libraries.SitePackages.Utilities.OpenExportSitePackageDialog(
                         context: context,
                         ss: Site.SiteSettings,
@@ -2655,6 +2826,7 @@ namespace Implem.Pleasanter.Models
                 case "Issues":
                 case "Results":
                 case "Wikis":
+                case "Dashboards":
                     return Libraries.SitePackages.Utilities.ExportSitePackage(
                         context: context,
                         ss: Site.SiteSettings);
@@ -2681,6 +2853,7 @@ namespace Implem.Pleasanter.Models
                 case "Issues":
                 case "Results":
                 case "Wikis":
+                case "Dashboards":
                     var response = Libraries.SitePackages.Utilities.ImportSitePackage(
                         context: context,
                         ss: Site.SiteSettings,
@@ -2726,7 +2899,11 @@ namespace Implem.Pleasanter.Models
                 default:
                     return (null, HtmlTemplates.Error(
                         context: context,
-                        errorData: new ErrorData(type: Error.Types.NotFound)));
+                        errorData: new ErrorData(
+                            context: context,
+                            type: Error.Types.NotFound,
+                            sysLogsStatus: 404,
+                            sysLogsDescription: Debugs.GetSysLogsDescription())));
             }
         }
 
@@ -2848,7 +3025,11 @@ namespace Implem.Pleasanter.Models
             {
                 return ApiResults.Error(
                     context: context,
-                    errorData: new ErrorData(type: Error.Types.BadRequest));
+                    errorData: new ErrorData(
+                        context: context,
+                        type: Error.Types.BadRequest,
+                        sysLogsStatus: 400,
+                        sysLogsDescription: Debugs.GetSysLogsDescription()));
             }
             var result = SiteUtilities.SynchronizeSummaries(
                 context: context,

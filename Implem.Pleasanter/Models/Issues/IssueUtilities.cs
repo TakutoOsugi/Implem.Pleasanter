@@ -1579,7 +1579,8 @@ namespace Implem.Pleasanter.Models
                                     context: context,
                                     ss: ss,
                                     issueModel: issueModel,
-                                    serverScriptModelRow: serverScriptModelRow))
+                                    serverScriptModelRow: serverScriptModelRow)
+)
                         .Hidden(
                             controlId: "BaseUrl",
                             value: Locations.BaseUrl(context: context))
@@ -3112,7 +3113,8 @@ namespace Implem.Pleasanter.Models
             var invalid = IssueValidators.OnCreating(
                 context: context,
                 ss: ss,
-                issueModel: issueModel);
+                issueModel: issueModel,
+                copy: copyFrom > 0);
             switch (invalid.Type)
             {
                 case Error.Types.None: break;
@@ -4602,6 +4604,99 @@ namespace Implem.Pleasanter.Models
                     return ApiResults.Error(
                         context: context,
                         errorData: errorData);
+            }
+        }
+
+        public static bool UpsertByServerScript(
+            Context context,
+            SiteSettings ss,
+            string previousTitle,
+            object model)
+        {
+            var api = context.RequestDataString.Deserialize<Api>();
+            var issueApiModel = context.RequestDataString.Deserialize<IssueApiModel>();
+            if (api?.Keys?.Any() != true || issueApiModel == null)
+            {
+                context.InvalidJsonData = !context.RequestDataString.IsNullOrEmpty();
+                return false;
+            }
+            api.View = api.View ?? new View();
+            api.Keys.ForEach(columnName =>
+            {
+                var objectValue = issueApiModel.ObjectValue(columnName: columnName);
+                if (objectValue != null)
+                {
+                    api.View.AddColumnFilterHash(
+                        context: context,
+                        ss: ss,
+                        column: ss.GetColumn(
+                            context: context,
+                            columnName: columnName),
+                        objectValue: objectValue);
+                    api.View.AddColumnFilterSearchTypes(
+                        columnName: columnName,
+                        searchType: Column.SearchTypes.ExactMatch);
+                }
+            });
+            var issueModel = new IssueModel(
+                context: context,
+                ss: ss,
+                issueId: 0,
+                view: api.View,
+                issueApiModel: issueApiModel);
+            switch (issueModel.AccessStatus)
+            {
+                case Databases.AccessStatuses.Selected:
+                    break;
+                case Databases.AccessStatuses.NotFound:
+                    return CreateByServerScript(
+                        context: context,
+                        ss: ss,
+                        model: model);
+                default:
+                    return false;
+            }
+            var invalid = IssueValidators.OnUpdating(
+                context: context,
+                ss: ss,
+                issueModel: issueModel,
+                api: true,
+                serverScript: true);
+            switch (invalid.Type)
+            {
+                case Error.Types.None:
+                    break;
+                default:
+                    return false;
+            }
+            issueModel.SiteId = ss.SiteId;
+            issueModel.SetTitle(
+                context: context,
+                ss: ss);
+            issueModel.VerUp = Versions.MustVerUp(
+                context: context,
+                ss: ss,
+                baseModel: issueModel);
+            var errorData = issueModel.Update(
+                context: context,
+                ss: ss,
+                notice: true,
+                previousTitle: previousTitle);
+            switch (errorData.Type)
+            {
+                case Error.Types.None:
+                    if (model is Libraries.ServerScripts.ServerScriptModelApiModel serverScriptModelApiModel)
+                    {
+                        if (serverScriptModelApiModel.Model is IssueModel data)
+                        {
+                            data.SetByModel(issueModel: issueModel);
+                        }
+                    }
+                    return true;
+                case Error.Types.Duplicated:
+                    return false;
+                default:
+                    return false;
             }
         }
 
@@ -8964,6 +9059,174 @@ namespace Implem.Pleasanter.Models
                     issueModel.Updator.Name,
                     issueModel.UpdatedTime.DisplayValue.ToString(context.CultureInfo())
                 });
+        }
+
+        public static string ReplaceLineByIssueModel(
+            this IssueModel issueModel,
+            Context context,
+            SiteSettings ss,
+            string line,
+            string itemTitle,
+            bool checkColumnAccessControl = false)
+        {
+            foreach (var column in ss.IncludedColumns(line))
+            {
+                var allowed = checkColumnAccessControl == false
+                    || ss.ReadColumnAccessControls.Allowed(
+                        context: context,
+                        ss: ss,
+                        column: column,
+                        mine: issueModel.Mine(context: context));
+                if (!allowed)
+                {
+                    line = line.Replace($"[{column.Name}]", string.Empty);
+                    continue;
+                }
+                switch (column.ColumnName)
+                {
+                    case "Title":
+                        line = line.Replace("[Title]", itemTitle);
+                        break;
+                    case "SiteId":
+                        line = line.Replace(
+                            "[SiteId]", issueModel.SiteId.ToExport(
+                                context: context,
+                                column: column));
+                        break;
+                    case "UpdatedTime":
+                        line = line.Replace(
+                            "[UpdatedTime]", issueModel.UpdatedTime.ToExport(
+                                context: context,
+                                column: column));
+                        break;
+                    case "IssueId":
+                        line = line.Replace(
+                            "[IssueId]", issueModel.IssueId.ToExport(
+                                context: context,
+                                column: column));
+                        break;
+                    case "Ver":
+                        line = line.Replace(
+                            "[Ver]", issueModel.Ver.ToExport(
+                                context: context,
+                                column: column));
+                        break;
+                    case "Body":
+                        line = line.Replace(
+                            "[Body]", issueModel.Body.ToExport(
+                                context: context,
+                                column: column));
+                        break;
+                    case "StartTime":
+                        line = line.Replace(
+                            "[StartTime]", issueModel.StartTime.ToExport(
+                                context: context,
+                                column: column));
+                        break;
+                    case "CompletionTime":
+                        line = line.Replace(
+                            "[CompletionTime]", issueModel.CompletionTime.ToExport(
+                                context: context,
+                                column: column));
+                        break;
+                    case "WorkValue":
+                        line = line.Replace(
+                            "[WorkValue]", issueModel.WorkValue.ToExport(
+                                context: context,
+                                column: column));
+                        break;
+                    case "ProgressRate":
+                        line = line.Replace(
+                            "[ProgressRate]", issueModel.ProgressRate.ToExport(
+                                context: context,
+                                column: column));
+                        break;
+                    case "Status":
+                        line = line.Replace(
+                            "[Status]", issueModel.Status.ToExport(
+                                context: context,
+                                column: column));
+                        break;
+                    case "Manager":
+                        line = line.Replace(
+                            "[Manager]", issueModel.Manager.ToExport(
+                                context: context,
+                                column: column));
+                        break;
+                    case "Owner":
+                        line = line.Replace(
+                            "[Owner]", issueModel.Owner.ToExport(
+                                context: context,
+                                column: column));
+                        break;
+                    case "Locked":
+                        line = line.Replace(
+                            "[Locked]", issueModel.Locked.ToExport(
+                                context: context,
+                                column: column));
+                        break;
+                    case "Comments":
+                        line = line.Replace(
+                            "[Comments]", issueModel.Comments.ToExport(
+                                context: context,
+                                column: column));
+                        break;
+                    case "Creator":
+                        line = line.Replace(
+                            "[Creator]", issueModel.Creator.ToExport(
+                                context: context,
+                                column: column));
+                        break;
+                    case "Updator":
+                        line = line.Replace(
+                            "[Updator]", issueModel.Updator.ToExport(
+                                context: context,
+                                column: column));
+                        break;
+                    case "CreatedTime":
+                        line = line.Replace(
+                            "[CreatedTime]", issueModel.CreatedTime.ToExport(
+                                context: context,
+                                column: column));
+                        break;
+                    default:
+                        switch (Def.ExtendedColumnTypes.Get(column?.Name ?? string.Empty))
+                        {
+                            case "Class":
+                                line = line.Replace(
+                                    $"[{column.Name}]", issueModel.GetClass(column: column).ToExport(
+                                        context: context,
+                                        column: column));
+                                break;
+                            case "Num":
+                                line = line.Replace(
+                                    $"[{column.Name}]", issueModel.GetNum(column: column).ToExport(
+                                        context: context,
+                                        column: column));
+                                break;
+                            case "Date":
+                                line = line.Replace(
+                                    $"[{column.Name}]", issueModel.GetDate(column: column).ToExport(
+                                        context: context,
+                                        column: column));
+                                break;
+                            case "Description":
+                                line = line.Replace(
+                                    $"[{column.Name}]", issueModel.GetDescription(column: column).ToExport(
+                                        context: context,
+                                        column: column));
+                                break;
+                            case "Check":
+                                line = line.Replace(
+                                    $"[{column.Name}]", issueModel.GetCheck(column: column).ToExport(
+                                        context: context,
+                                        column: column));
+                                break;
+                        }
+                        break;
+                }
+            }
+            return line;
         }
     }
 }

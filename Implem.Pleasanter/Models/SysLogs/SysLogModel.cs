@@ -37,6 +37,12 @@ namespace Implem.Pleasanter.Models
         public string Application = string.Empty;
         public string Class = string.Empty;
         public string Method = string.Empty;
+        public bool Api = false;
+        public long SiteId = 0;
+        public long ReferenceId = 0;
+        public string ReferenceType = string.Empty;
+        public long Status = 0;
+        public string Description = string.Empty;
         public string RequestData = string.Empty;
         public string HttpMethod = string.Empty;
         public int RequestSize = 0;
@@ -82,6 +88,12 @@ namespace Implem.Pleasanter.Models
         public string SavedApplication = string.Empty;
         public string SavedClass = string.Empty;
         public string SavedMethod = string.Empty;
+        public bool SavedApi = false;
+        public long SavedSiteId = 0;
+        public long SavedReferenceId = 0;
+        public string SavedReferenceType = string.Empty;
+        public long SavedStatus = 0;
+        public string SavedDescription = string.Empty;
         public string SavedRequestData = string.Empty;
         public string SavedHttpMethod = string.Empty;
         public int SavedRequestSize = 0;
@@ -108,276 +120,484 @@ namespace Implem.Pleasanter.Models
         public bool SavedInDebug = false;
         public string SavedAssemblyVersion = string.Empty;
 
-        public bool SysLogId_Updated(Context context, Column column = null)
+        public bool SysLogId_Updated(Context context, bool copy = false, Column column = null)
         {
-            return SysLogId != SavedSysLogId &&
-                (column == null ||
-                column.DefaultInput.IsNullOrEmpty() ||
-                column.GetDefaultInput(context: context).ToLong() != SysLogId);
+            if (copy && column?.CopyByDefault == true)
+            {
+                return column.GetDefaultInput(context: context).ToLong() != SysLogId;
+            }
+            return SysLogId != SavedSysLogId
+                &&  (column == null
+                    || column.DefaultInput.IsNullOrEmpty()
+                    || column.GetDefaultInput(context: context).ToLong() != SysLogId);
         }
 
-        public bool SysLogType_Updated(Context context, Column column = null)
+        public bool SysLogType_Updated(Context context, bool copy = false, Column column = null)
         {
-            return SysLogType.ToInt() != SavedSysLogType &&
-                (column == null ||
-                column.DefaultInput.IsNullOrEmpty() ||
-                column.GetDefaultInput(context: context).ToInt() != SysLogType.ToInt());
+            if (copy && column?.CopyByDefault == true)
+            {
+                return column.GetDefaultInput(context: context).ToInt() != SysLogType.ToInt();
+            }
+            return SysLogType.ToInt() != SavedSysLogType
+                &&  (column == null
+                    || column.DefaultInput.IsNullOrEmpty()
+                    || column.GetDefaultInput(context: context).ToInt() != SysLogType.ToInt());
         }
 
-        public bool OnAzure_Updated(Context context, Column column = null)
+        public bool OnAzure_Updated(Context context, bool copy = false, Column column = null)
         {
-            return OnAzure != SavedOnAzure &&
-                (column == null ||
-                column.DefaultInput.IsNullOrEmpty() ||
-                column.GetDefaultInput(context: context).ToBool() != OnAzure);
+            if (copy && column?.CopyByDefault == true)
+            {
+                return column.GetDefaultInput(context: context).ToBool() != OnAzure;
+            }
+            return OnAzure != SavedOnAzure
+                &&  (column == null
+                    || column.DefaultInput.IsNullOrEmpty()
+                    || column.GetDefaultInput(context: context).ToBool() != OnAzure);
         }
 
-        public bool MachineName_Updated(Context context, Column column = null)
+        public bool MachineName_Updated(Context context, bool copy = false, Column column = null)
         {
-            return MachineName != SavedMachineName && MachineName != null &&
-                (column == null ||
-                column.DefaultInput.IsNullOrEmpty() ||
-                column.GetDefaultInput(context: context).ToString() != MachineName);
+            if (copy && column?.CopyByDefault == true)
+            {
+                return column.GetDefaultInput(context: context).ToString() != MachineName;
+            }
+            return MachineName != SavedMachineName && MachineName != null
+                &&  (column == null
+                    || column.DefaultInput.IsNullOrEmpty()
+                    || column.GetDefaultInput(context: context).ToString() != MachineName);
         }
 
-        public bool ServiceName_Updated(Context context, Column column = null)
+        public bool ServiceName_Updated(Context context, bool copy = false, Column column = null)
         {
-            return ServiceName != SavedServiceName && ServiceName != null &&
-                (column == null ||
-                column.DefaultInput.IsNullOrEmpty() ||
-                column.GetDefaultInput(context: context).ToString() != ServiceName);
+            if (copy && column?.CopyByDefault == true)
+            {
+                return column.GetDefaultInput(context: context).ToString() != ServiceName;
+            }
+            return ServiceName != SavedServiceName && ServiceName != null
+                &&  (column == null
+                    || column.DefaultInput.IsNullOrEmpty()
+                    || column.GetDefaultInput(context: context).ToString() != ServiceName);
         }
 
-        public bool TenantName_Updated(Context context, Column column = null)
+        public bool TenantName_Updated(Context context, bool copy = false, Column column = null)
         {
-            return TenantName != SavedTenantName && TenantName != null &&
-                (column == null ||
-                column.DefaultInput.IsNullOrEmpty() ||
-                column.GetDefaultInput(context: context).ToString() != TenantName);
+            if (copy && column?.CopyByDefault == true)
+            {
+                return column.GetDefaultInput(context: context).ToString() != TenantName;
+            }
+            return TenantName != SavedTenantName && TenantName != null
+                &&  (column == null
+                    || column.DefaultInput.IsNullOrEmpty()
+                    || column.GetDefaultInput(context: context).ToString() != TenantName);
         }
 
-        public bool Application_Updated(Context context, Column column = null)
+        public bool Application_Updated(Context context, bool copy = false, Column column = null)
         {
-            return Application != SavedApplication && Application != null &&
-                (column == null ||
-                column.DefaultInput.IsNullOrEmpty() ||
-                column.GetDefaultInput(context: context).ToString() != Application);
+            if (copy && column?.CopyByDefault == true)
+            {
+                return column.GetDefaultInput(context: context).ToString() != Application;
+            }
+            return Application != SavedApplication && Application != null
+                &&  (column == null
+                    || column.DefaultInput.IsNullOrEmpty()
+                    || column.GetDefaultInput(context: context).ToString() != Application);
         }
 
-        public bool Class_Updated(Context context, Column column = null)
+        public bool Class_Updated(Context context, bool copy = false, Column column = null)
         {
-            return Class != SavedClass && Class != null &&
-                (column == null ||
-                column.DefaultInput.IsNullOrEmpty() ||
-                column.GetDefaultInput(context: context).ToString() != Class);
+            if (copy && column?.CopyByDefault == true)
+            {
+                return column.GetDefaultInput(context: context).ToString() != Class;
+            }
+            return Class != SavedClass && Class != null
+                &&  (column == null
+                    || column.DefaultInput.IsNullOrEmpty()
+                    || column.GetDefaultInput(context: context).ToString() != Class);
         }
 
-        public bool Method_Updated(Context context, Column column = null)
+        public bool Method_Updated(Context context, bool copy = false, Column column = null)
         {
-            return Method != SavedMethod && Method != null &&
-                (column == null ||
-                column.DefaultInput.IsNullOrEmpty() ||
-                column.GetDefaultInput(context: context).ToString() != Method);
+            if (copy && column?.CopyByDefault == true)
+            {
+                return column.GetDefaultInput(context: context).ToString() != Method;
+            }
+            return Method != SavedMethod && Method != null
+                &&  (column == null
+                    || column.DefaultInput.IsNullOrEmpty()
+                    || column.GetDefaultInput(context: context).ToString() != Method);
         }
 
-        public bool RequestData_Updated(Context context, Column column = null)
+        public bool Api_Updated(Context context, bool copy = false, Column column = null)
         {
-            return RequestData != SavedRequestData && RequestData != null &&
-                (column == null ||
-                column.DefaultInput.IsNullOrEmpty() ||
-                column.GetDefaultInput(context: context).ToString() != RequestData);
+            if (copy && column?.CopyByDefault == true)
+            {
+                return column.GetDefaultInput(context: context).ToBool() != Api;
+            }
+            return Api != SavedApi
+                &&  (column == null
+                    || column.DefaultInput.IsNullOrEmpty()
+                    || column.GetDefaultInput(context: context).ToBool() != Api);
         }
 
-        public bool HttpMethod_Updated(Context context, Column column = null)
+        public bool SiteId_Updated(Context context, bool copy = false, Column column = null)
         {
-            return HttpMethod != SavedHttpMethod && HttpMethod != null &&
-                (column == null ||
-                column.DefaultInput.IsNullOrEmpty() ||
-                column.GetDefaultInput(context: context).ToString() != HttpMethod);
+            if (copy && column?.CopyByDefault == true)
+            {
+                return column.GetDefaultInput(context: context).ToLong() != SiteId;
+            }
+            return SiteId != SavedSiteId
+                &&  (column == null
+                    || column.DefaultInput.IsNullOrEmpty()
+                    || column.GetDefaultInput(context: context).ToLong() != SiteId);
         }
 
-        public bool RequestSize_Updated(Context context, Column column = null)
+        public bool ReferenceId_Updated(Context context, bool copy = false, Column column = null)
         {
-            return RequestSize != SavedRequestSize &&
-                (column == null ||
-                column.DefaultInput.IsNullOrEmpty() ||
-                column.GetDefaultInput(context: context).ToInt() != RequestSize);
+            if (copy && column?.CopyByDefault == true)
+            {
+                return column.GetDefaultInput(context: context).ToLong() != ReferenceId;
+            }
+            return ReferenceId != SavedReferenceId
+                &&  (column == null
+                    || column.DefaultInput.IsNullOrEmpty()
+                    || column.GetDefaultInput(context: context).ToLong() != ReferenceId);
         }
 
-        public bool ResponseSize_Updated(Context context, Column column = null)
+        public bool ReferenceType_Updated(Context context, bool copy = false, Column column = null)
         {
-            return ResponseSize != SavedResponseSize &&
-                (column == null ||
-                column.DefaultInput.IsNullOrEmpty() ||
-                column.GetDefaultInput(context: context).ToInt() != ResponseSize);
+            if (copy && column?.CopyByDefault == true)
+            {
+                return column.GetDefaultInput(context: context).ToString() != ReferenceType;
+            }
+            return ReferenceType != SavedReferenceType && ReferenceType != null
+                &&  (column == null
+                    || column.DefaultInput.IsNullOrEmpty()
+                    || column.GetDefaultInput(context: context).ToString() != ReferenceType);
         }
 
-        public bool Elapsed_Updated(Context context, Column column = null)
+        public bool Status_Updated(Context context, bool copy = false, Column column = null)
         {
-            return Elapsed != SavedElapsed &&
-                (column == null ||
-                column.DefaultInput.IsNullOrEmpty() ||
-                column.GetDefaultInput(context: context).ToDouble() != Elapsed);
+            if (copy && column?.CopyByDefault == true)
+            {
+                return column.GetDefaultInput(context: context).ToLong() != Status;
+            }
+            return Status != SavedStatus
+                &&  (column == null
+                    || column.DefaultInput.IsNullOrEmpty()
+                    || column.GetDefaultInput(context: context).ToLong() != Status);
         }
 
-        public bool ApplicationAge_Updated(Context context, Column column = null)
+        public bool Description_Updated(Context context, bool copy = false, Column column = null)
         {
-            return ApplicationAge != SavedApplicationAge &&
-                (column == null ||
-                column.DefaultInput.IsNullOrEmpty() ||
-                column.GetDefaultInput(context: context).ToDouble() != ApplicationAge);
+            if (copy && column?.CopyByDefault == true)
+            {
+                return column.GetDefaultInput(context: context).ToString() != Description;
+            }
+            return Description != SavedDescription && Description != null
+                &&  (column == null
+                    || column.DefaultInput.IsNullOrEmpty()
+                    || column.GetDefaultInput(context: context).ToString() != Description);
         }
 
-        public bool ApplicationRequestInterval_Updated(Context context, Column column = null)
+        public bool RequestData_Updated(Context context, bool copy = false, Column column = null)
         {
-            return ApplicationRequestInterval != SavedApplicationRequestInterval &&
-                (column == null ||
-                column.DefaultInput.IsNullOrEmpty() ||
-                column.GetDefaultInput(context: context).ToDouble() != ApplicationRequestInterval);
+            if (copy && column?.CopyByDefault == true)
+            {
+                return column.GetDefaultInput(context: context).ToString() != RequestData;
+            }
+            return RequestData != SavedRequestData && RequestData != null
+                &&  (column == null
+                    || column.DefaultInput.IsNullOrEmpty()
+                    || column.GetDefaultInput(context: context).ToString() != RequestData);
         }
 
-        public bool SessionAge_Updated(Context context, Column column = null)
+        public bool HttpMethod_Updated(Context context, bool copy = false, Column column = null)
         {
-            return SessionAge != SavedSessionAge &&
-                (column == null ||
-                column.DefaultInput.IsNullOrEmpty() ||
-                column.GetDefaultInput(context: context).ToDouble() != SessionAge);
+            if (copy && column?.CopyByDefault == true)
+            {
+                return column.GetDefaultInput(context: context).ToString() != HttpMethod;
+            }
+            return HttpMethod != SavedHttpMethod && HttpMethod != null
+                &&  (column == null
+                    || column.DefaultInput.IsNullOrEmpty()
+                    || column.GetDefaultInput(context: context).ToString() != HttpMethod);
         }
 
-        public bool SessionRequestInterval_Updated(Context context, Column column = null)
+        public bool RequestSize_Updated(Context context, bool copy = false, Column column = null)
         {
-            return SessionRequestInterval != SavedSessionRequestInterval &&
-                (column == null ||
-                column.DefaultInput.IsNullOrEmpty() ||
-                column.GetDefaultInput(context: context).ToDouble() != SessionRequestInterval);
+            if (copy && column?.CopyByDefault == true)
+            {
+                return column.GetDefaultInput(context: context).ToInt() != RequestSize;
+            }
+            return RequestSize != SavedRequestSize
+                &&  (column == null
+                    || column.DefaultInput.IsNullOrEmpty()
+                    || column.GetDefaultInput(context: context).ToInt() != RequestSize);
         }
 
-        public bool WorkingSet64_Updated(Context context, Column column = null)
+        public bool ResponseSize_Updated(Context context, bool copy = false, Column column = null)
         {
-            return WorkingSet64 != SavedWorkingSet64 &&
-                (column == null ||
-                column.DefaultInput.IsNullOrEmpty() ||
-                column.GetDefaultInput(context: context).ToLong() != WorkingSet64);
+            if (copy && column?.CopyByDefault == true)
+            {
+                return column.GetDefaultInput(context: context).ToInt() != ResponseSize;
+            }
+            return ResponseSize != SavedResponseSize
+                &&  (column == null
+                    || column.DefaultInput.IsNullOrEmpty()
+                    || column.GetDefaultInput(context: context).ToInt() != ResponseSize);
         }
 
-        public bool VirtualMemorySize64_Updated(Context context, Column column = null)
+        public bool Elapsed_Updated(Context context, bool copy = false, Column column = null)
         {
-            return VirtualMemorySize64 != SavedVirtualMemorySize64 &&
-                (column == null ||
-                column.DefaultInput.IsNullOrEmpty() ||
-                column.GetDefaultInput(context: context).ToLong() != VirtualMemorySize64);
+            if (copy && column?.CopyByDefault == true)
+            {
+                return column.GetDefaultInput(context: context).ToDouble() != Elapsed;
+            }
+            return Elapsed != SavedElapsed
+                &&  (column == null
+                    || column.DefaultInput.IsNullOrEmpty()
+                    || column.GetDefaultInput(context: context).ToDouble() != Elapsed);
         }
 
-        public bool ProcessId_Updated(Context context, Column column = null)
+        public bool ApplicationAge_Updated(Context context, bool copy = false, Column column = null)
         {
-            return ProcessId != SavedProcessId &&
-                (column == null ||
-                column.DefaultInput.IsNullOrEmpty() ||
-                column.GetDefaultInput(context: context).ToInt() != ProcessId);
+            if (copy && column?.CopyByDefault == true)
+            {
+                return column.GetDefaultInput(context: context).ToDouble() != ApplicationAge;
+            }
+            return ApplicationAge != SavedApplicationAge
+                &&  (column == null
+                    || column.DefaultInput.IsNullOrEmpty()
+                    || column.GetDefaultInput(context: context).ToDouble() != ApplicationAge);
         }
 
-        public bool ProcessName_Updated(Context context, Column column = null)
+        public bool ApplicationRequestInterval_Updated(Context context, bool copy = false, Column column = null)
         {
-            return ProcessName != SavedProcessName && ProcessName != null &&
-                (column == null ||
-                column.DefaultInput.IsNullOrEmpty() ||
-                column.GetDefaultInput(context: context).ToString() != ProcessName);
+            if (copy && column?.CopyByDefault == true)
+            {
+                return column.GetDefaultInput(context: context).ToDouble() != ApplicationRequestInterval;
+            }
+            return ApplicationRequestInterval != SavedApplicationRequestInterval
+                &&  (column == null
+                    || column.DefaultInput.IsNullOrEmpty()
+                    || column.GetDefaultInput(context: context).ToDouble() != ApplicationRequestInterval);
         }
 
-        public bool BasePriority_Updated(Context context, Column column = null)
+        public bool SessionAge_Updated(Context context, bool copy = false, Column column = null)
         {
-            return BasePriority != SavedBasePriority &&
-                (column == null ||
-                column.DefaultInput.IsNullOrEmpty() ||
-                column.GetDefaultInput(context: context).ToInt() != BasePriority);
+            if (copy && column?.CopyByDefault == true)
+            {
+                return column.GetDefaultInput(context: context).ToDouble() != SessionAge;
+            }
+            return SessionAge != SavedSessionAge
+                &&  (column == null
+                    || column.DefaultInput.IsNullOrEmpty()
+                    || column.GetDefaultInput(context: context).ToDouble() != SessionAge);
         }
 
-        public bool Url_Updated(Context context, Column column = null)
+        public bool SessionRequestInterval_Updated(Context context, bool copy = false, Column column = null)
         {
-            return Url != SavedUrl && Url != null &&
-                (column == null ||
-                column.DefaultInput.IsNullOrEmpty() ||
-                column.GetDefaultInput(context: context).ToString() != Url);
+            if (copy && column?.CopyByDefault == true)
+            {
+                return column.GetDefaultInput(context: context).ToDouble() != SessionRequestInterval;
+            }
+            return SessionRequestInterval != SavedSessionRequestInterval
+                &&  (column == null
+                    || column.DefaultInput.IsNullOrEmpty()
+                    || column.GetDefaultInput(context: context).ToDouble() != SessionRequestInterval);
         }
 
-        public bool UrlReferer_Updated(Context context, Column column = null)
+        public bool WorkingSet64_Updated(Context context, bool copy = false, Column column = null)
         {
-            return UrlReferer != SavedUrlReferer && UrlReferer != null &&
-                (column == null ||
-                column.DefaultInput.IsNullOrEmpty() ||
-                column.GetDefaultInput(context: context).ToString() != UrlReferer);
+            if (copy && column?.CopyByDefault == true)
+            {
+                return column.GetDefaultInput(context: context).ToLong() != WorkingSet64;
+            }
+            return WorkingSet64 != SavedWorkingSet64
+                &&  (column == null
+                    || column.DefaultInput.IsNullOrEmpty()
+                    || column.GetDefaultInput(context: context).ToLong() != WorkingSet64);
         }
 
-        public bool UserHostName_Updated(Context context, Column column = null)
+        public bool VirtualMemorySize64_Updated(Context context, bool copy = false, Column column = null)
         {
-            return UserHostName != SavedUserHostName && UserHostName != null &&
-                (column == null ||
-                column.DefaultInput.IsNullOrEmpty() ||
-                column.GetDefaultInput(context: context).ToString() != UserHostName);
+            if (copy && column?.CopyByDefault == true)
+            {
+                return column.GetDefaultInput(context: context).ToLong() != VirtualMemorySize64;
+            }
+            return VirtualMemorySize64 != SavedVirtualMemorySize64
+                &&  (column == null
+                    || column.DefaultInput.IsNullOrEmpty()
+                    || column.GetDefaultInput(context: context).ToLong() != VirtualMemorySize64);
         }
 
-        public bool UserHostAddress_Updated(Context context, Column column = null)
+        public bool ProcessId_Updated(Context context, bool copy = false, Column column = null)
         {
-            return UserHostAddress != SavedUserHostAddress && UserHostAddress != null &&
-                (column == null ||
-                column.DefaultInput.IsNullOrEmpty() ||
-                column.GetDefaultInput(context: context).ToString() != UserHostAddress);
+            if (copy && column?.CopyByDefault == true)
+            {
+                return column.GetDefaultInput(context: context).ToInt() != ProcessId;
+            }
+            return ProcessId != SavedProcessId
+                &&  (column == null
+                    || column.DefaultInput.IsNullOrEmpty()
+                    || column.GetDefaultInput(context: context).ToInt() != ProcessId);
         }
 
-        public bool UserLanguage_Updated(Context context, Column column = null)
+        public bool ProcessName_Updated(Context context, bool copy = false, Column column = null)
         {
-            return UserLanguage != SavedUserLanguage && UserLanguage != null &&
-                (column == null ||
-                column.DefaultInput.IsNullOrEmpty() ||
-                column.GetDefaultInput(context: context).ToString() != UserLanguage);
+            if (copy && column?.CopyByDefault == true)
+            {
+                return column.GetDefaultInput(context: context).ToString() != ProcessName;
+            }
+            return ProcessName != SavedProcessName && ProcessName != null
+                &&  (column == null
+                    || column.DefaultInput.IsNullOrEmpty()
+                    || column.GetDefaultInput(context: context).ToString() != ProcessName);
         }
 
-        public bool UserAgent_Updated(Context context, Column column = null)
+        public bool BasePriority_Updated(Context context, bool copy = false, Column column = null)
         {
-            return UserAgent != SavedUserAgent && UserAgent != null &&
-                (column == null ||
-                column.DefaultInput.IsNullOrEmpty() ||
-                column.GetDefaultInput(context: context).ToString() != UserAgent);
+            if (copy && column?.CopyByDefault == true)
+            {
+                return column.GetDefaultInput(context: context).ToInt() != BasePriority;
+            }
+            return BasePriority != SavedBasePriority
+                &&  (column == null
+                    || column.DefaultInput.IsNullOrEmpty()
+                    || column.GetDefaultInput(context: context).ToInt() != BasePriority);
         }
 
-        public bool SessionGuid_Updated(Context context, Column column = null)
+        public bool Url_Updated(Context context, bool copy = false, Column column = null)
         {
-            return SessionGuid != SavedSessionGuid && SessionGuid != null &&
-                (column == null ||
-                column.DefaultInput.IsNullOrEmpty() ||
-                column.GetDefaultInput(context: context).ToString() != SessionGuid);
+            if (copy && column?.CopyByDefault == true)
+            {
+                return column.GetDefaultInput(context: context).ToString() != Url;
+            }
+            return Url != SavedUrl && Url != null
+                &&  (column == null
+                    || column.DefaultInput.IsNullOrEmpty()
+                    || column.GetDefaultInput(context: context).ToString() != Url);
         }
 
-        public bool ErrMessage_Updated(Context context, Column column = null)
+        public bool UrlReferer_Updated(Context context, bool copy = false, Column column = null)
         {
-            return ErrMessage != SavedErrMessage && ErrMessage != null &&
-                (column == null ||
-                column.DefaultInput.IsNullOrEmpty() ||
-                column.GetDefaultInput(context: context).ToString() != ErrMessage);
+            if (copy && column?.CopyByDefault == true)
+            {
+                return column.GetDefaultInput(context: context).ToString() != UrlReferer;
+            }
+            return UrlReferer != SavedUrlReferer && UrlReferer != null
+                &&  (column == null
+                    || column.DefaultInput.IsNullOrEmpty()
+                    || column.GetDefaultInput(context: context).ToString() != UrlReferer);
         }
 
-        public bool ErrStackTrace_Updated(Context context, Column column = null)
+        public bool UserHostName_Updated(Context context, bool copy = false, Column column = null)
         {
-            return ErrStackTrace != SavedErrStackTrace && ErrStackTrace != null &&
-                (column == null ||
-                column.DefaultInput.IsNullOrEmpty() ||
-                column.GetDefaultInput(context: context).ToString() != ErrStackTrace);
+            if (copy && column?.CopyByDefault == true)
+            {
+                return column.GetDefaultInput(context: context).ToString() != UserHostName;
+            }
+            return UserHostName != SavedUserHostName && UserHostName != null
+                &&  (column == null
+                    || column.DefaultInput.IsNullOrEmpty()
+                    || column.GetDefaultInput(context: context).ToString() != UserHostName);
         }
 
-        public bool InDebug_Updated(Context context, Column column = null)
+        public bool UserHostAddress_Updated(Context context, bool copy = false, Column column = null)
         {
-            return InDebug != SavedInDebug &&
-                (column == null ||
-                column.DefaultInput.IsNullOrEmpty() ||
-                column.GetDefaultInput(context: context).ToBool() != InDebug);
+            if (copy && column?.CopyByDefault == true)
+            {
+                return column.GetDefaultInput(context: context).ToString() != UserHostAddress;
+            }
+            return UserHostAddress != SavedUserHostAddress && UserHostAddress != null
+                &&  (column == null
+                    || column.DefaultInput.IsNullOrEmpty()
+                    || column.GetDefaultInput(context: context).ToString() != UserHostAddress);
         }
 
-        public bool AssemblyVersion_Updated(Context context, Column column = null)
+        public bool UserLanguage_Updated(Context context, bool copy = false, Column column = null)
         {
-            return AssemblyVersion != SavedAssemblyVersion && AssemblyVersion != null &&
-                (column == null ||
-                column.DefaultInput.IsNullOrEmpty() ||
-                column.GetDefaultInput(context: context).ToString() != AssemblyVersion);
+            if (copy && column?.CopyByDefault == true)
+            {
+                return column.GetDefaultInput(context: context).ToString() != UserLanguage;
+            }
+            return UserLanguage != SavedUserLanguage && UserLanguage != null
+                &&  (column == null
+                    || column.DefaultInput.IsNullOrEmpty()
+                    || column.GetDefaultInput(context: context).ToString() != UserLanguage);
+        }
+
+        public bool UserAgent_Updated(Context context, bool copy = false, Column column = null)
+        {
+            if (copy && column?.CopyByDefault == true)
+            {
+                return column.GetDefaultInput(context: context).ToString() != UserAgent;
+            }
+            return UserAgent != SavedUserAgent && UserAgent != null
+                &&  (column == null
+                    || column.DefaultInput.IsNullOrEmpty()
+                    || column.GetDefaultInput(context: context).ToString() != UserAgent);
+        }
+
+        public bool SessionGuid_Updated(Context context, bool copy = false, Column column = null)
+        {
+            if (copy && column?.CopyByDefault == true)
+            {
+                return column.GetDefaultInput(context: context).ToString() != SessionGuid;
+            }
+            return SessionGuid != SavedSessionGuid && SessionGuid != null
+                &&  (column == null
+                    || column.DefaultInput.IsNullOrEmpty()
+                    || column.GetDefaultInput(context: context).ToString() != SessionGuid);
+        }
+
+        public bool ErrMessage_Updated(Context context, bool copy = false, Column column = null)
+        {
+            if (copy && column?.CopyByDefault == true)
+            {
+                return column.GetDefaultInput(context: context).ToString() != ErrMessage;
+            }
+            return ErrMessage != SavedErrMessage && ErrMessage != null
+                &&  (column == null
+                    || column.DefaultInput.IsNullOrEmpty()
+                    || column.GetDefaultInput(context: context).ToString() != ErrMessage);
+        }
+
+        public bool ErrStackTrace_Updated(Context context, bool copy = false, Column column = null)
+        {
+            if (copy && column?.CopyByDefault == true)
+            {
+                return column.GetDefaultInput(context: context).ToString() != ErrStackTrace;
+            }
+            return ErrStackTrace != SavedErrStackTrace && ErrStackTrace != null
+                &&  (column == null
+                    || column.DefaultInput.IsNullOrEmpty()
+                    || column.GetDefaultInput(context: context).ToString() != ErrStackTrace);
+        }
+
+        public bool InDebug_Updated(Context context, bool copy = false, Column column = null)
+        {
+            if (copy && column?.CopyByDefault == true)
+            {
+                return column.GetDefaultInput(context: context).ToBool() != InDebug;
+            }
+            return InDebug != SavedInDebug
+                &&  (column == null
+                    || column.DefaultInput.IsNullOrEmpty()
+                    || column.GetDefaultInput(context: context).ToBool() != InDebug);
+        }
+
+        public bool AssemblyVersion_Updated(Context context, bool copy = false, Column column = null)
+        {
+            if (copy && column?.CopyByDefault == true)
+            {
+                return column.GetDefaultInput(context: context).ToString() != AssemblyVersion;
+            }
+            return AssemblyVersion != SavedAssemblyVersion && AssemblyVersion != null
+                &&  (column == null
+                    || column.DefaultInput.IsNullOrEmpty()
+                    || column.GetDefaultInput(context: context).ToString() != AssemblyVersion);
         }
 
         public string CsvData(
@@ -518,6 +738,78 @@ namespace Implem.Pleasanter.Models
                         column: column,
                         mine: mine)
                             ? Method.ToExport(
+                                context: context,
+                                column: column,
+                                exportColumn: exportColumn)
+                            : string.Empty;
+                    break;
+                case "Api":
+                    value = ss.ReadColumnAccessControls.Allowed(
+                        context: context,
+                        ss: ss,
+                        column: column,
+                        mine: mine)
+                            ? Api.ToExport(
+                                context: context,
+                                column: column,
+                                exportColumn: exportColumn)
+                            : string.Empty;
+                    break;
+                case "SiteId":
+                    value = ss.ReadColumnAccessControls.Allowed(
+                        context: context,
+                        ss: ss,
+                        column: column,
+                        mine: mine)
+                            ? SiteId.ToExport(
+                                context: context,
+                                column: column,
+                                exportColumn: exportColumn)
+                            : string.Empty;
+                    break;
+                case "ReferenceId":
+                    value = ss.ReadColumnAccessControls.Allowed(
+                        context: context,
+                        ss: ss,
+                        column: column,
+                        mine: mine)
+                            ? ReferenceId.ToExport(
+                                context: context,
+                                column: column,
+                                exportColumn: exportColumn)
+                            : string.Empty;
+                    break;
+                case "ReferenceType":
+                    value = ss.ReadColumnAccessControls.Allowed(
+                        context: context,
+                        ss: ss,
+                        column: column,
+                        mine: mine)
+                            ? ReferenceType.ToExport(
+                                context: context,
+                                column: column,
+                                exportColumn: exportColumn)
+                            : string.Empty;
+                    break;
+                case "Status":
+                    value = ss.ReadColumnAccessControls.Allowed(
+                        context: context,
+                        ss: ss,
+                        column: column,
+                        mine: mine)
+                            ? Status.ToExport(
+                                context: context,
+                                column: column,
+                                exportColumn: exportColumn)
+                            : string.Empty;
+                    break;
+                case "Description":
+                    value = ss.ReadColumnAccessControls.Allowed(
+                        context: context,
+                        ss: ss,
+                        column: column,
+                        mine: mine)
+                            ? Description.ToExport(
                                 context: context,
                                 column: column,
                                 exportColumn: exportColumn)
@@ -990,6 +1282,7 @@ namespace Implem.Pleasanter.Models
             long sysLogId,
             Dictionary<string, string> formData = null,
             SysLogApiModel sysLogApiModel = null,
+            SqlColumnCollection column = null,
             bool clearSessions = false,
             List<long> switchTargets = null,
             MethodTypes methodType = MethodTypes.NotSet)
@@ -998,8 +1291,10 @@ namespace Implem.Pleasanter.Models
             SysLogId = sysLogId;
             if (context.QueryStrings.ContainsKey("ver"))
             {
-                Get(context: context,
+                Get(
+                    context: context,
                     tableType: Sqls.TableTypes.NormalAndHistory,
+                    column: column,
                     where: Rds.SysLogsWhereDefault(
                         context: context,
                         sysLogModel: this)
@@ -1007,7 +1302,10 @@ namespace Implem.Pleasanter.Models
             }
             else
             {
-                Get(context: context, ss: ss);
+                Get(
+                    context: context,
+                    ss: ss,
+                    column: column);
             }
             if (clearSessions) ClearSessions(context: context);
             if (formData != null)
@@ -1116,6 +1414,12 @@ namespace Implem.Pleasanter.Models
                     case "Application": data.Application = Application; break;
                     case "Class": data.Class = Class; break;
                     case "Method": data.Method = Method; break;
+                    case "Api": data.Api = Api; break;
+                    case "SiteId": data.SiteId = SiteId; break;
+                    case "ReferenceId": data.ReferenceId = ReferenceId; break;
+                    case "ReferenceType": data.ReferenceType = ReferenceType; break;
+                    case "Status": data.Status = Status; break;
+                    case "Description": data.Description = Description; break;
                     case "RequestData": data.RequestData = RequestData; break;
                     case "HttpMethod": data.HttpMethod = HttpMethod; break;
                     case "RequestSize": data.RequestSize = RequestSize; break;
@@ -1223,6 +1527,11 @@ namespace Implem.Pleasanter.Models
                         column: column);
                 case "Method":
                     return Method.ToDisplay(
+                        context: context,
+                        ss: ss,
+                        column: column);
+                case "Api":
+                    return Api.ToDisplay(
                         context: context,
                         ss: ss,
                         column: column);
@@ -1502,6 +1811,36 @@ namespace Implem.Pleasanter.Models
                         context: context,
                         ss: ss,
                         column: column);
+                case "Api":
+                    return Api.ToApiDisplayValue(
+                        context: context,
+                        ss: ss,
+                        column: column);
+                case "SiteId":
+                    return SiteId.ToApiDisplayValue(
+                        context: context,
+                        ss: ss,
+                        column: column);
+                case "ReferenceId":
+                    return ReferenceId.ToApiDisplayValue(
+                        context: context,
+                        ss: ss,
+                        column: column);
+                case "ReferenceType":
+                    return ReferenceType.ToApiDisplayValue(
+                        context: context,
+                        ss: ss,
+                        column: column);
+                case "Status":
+                    return Status.ToApiDisplayValue(
+                        context: context,
+                        ss: ss,
+                        column: column);
+                case "Description":
+                    return Description.ToApiDisplayValue(
+                        context: context,
+                        ss: ss,
+                        column: column);
                 case "RequestData":
                     return RequestData.ToApiDisplayValue(
                         context: context,
@@ -1597,6 +1936,11 @@ namespace Implem.Pleasanter.Models
                         context: context,
                         ss: ss,
                         column: column);
+                case "Title":
+                    return Title.ToApiDisplayValue(
+                        context: context,
+                        ss: ss,
+                        column: column);
                 case "UserAgent":
                     return UserAgent.ToApiDisplayValue(
                         context: context,
@@ -1614,11 +1958,6 @@ namespace Implem.Pleasanter.Models
                         column: column);
                 case "ErrStackTrace":
                     return ErrStackTrace.ToApiDisplayValue(
-                        context: context,
-                        ss: ss,
-                        column: column);
-                case "Title":
-                    return Title.ToApiDisplayValue(
                         context: context,
                         ss: ss,
                         column: column);
@@ -1778,6 +2117,36 @@ namespace Implem.Pleasanter.Models
                         context: context,
                         ss: ss,
                         column: column);
+                case "Api":
+                    return Api.ToApiValue(
+                        context: context,
+                        ss: ss,
+                        column: column);
+                case "SiteId":
+                    return SiteId.ToApiValue(
+                        context: context,
+                        ss: ss,
+                        column: column);
+                case "ReferenceId":
+                    return ReferenceId.ToApiValue(
+                        context: context,
+                        ss: ss,
+                        column: column);
+                case "ReferenceType":
+                    return ReferenceType.ToApiValue(
+                        context: context,
+                        ss: ss,
+                        column: column);
+                case "Status":
+                    return Status.ToApiValue(
+                        context: context,
+                        ss: ss,
+                        column: column);
+                case "Description":
+                    return Description.ToApiValue(
+                        context: context,
+                        ss: ss,
+                        column: column);
                 case "RequestData":
                     return RequestData.ToApiValue(
                         context: context,
@@ -1873,6 +2242,11 @@ namespace Implem.Pleasanter.Models
                         context: context,
                         ss: ss,
                         column: column);
+                case "Title":
+                    return Title.ToApiValue(
+                        context: context,
+                        ss: ss,
+                        column: column);
                 case "UserAgent":
                     return UserAgent.ToApiValue(
                         context: context,
@@ -1890,11 +2264,6 @@ namespace Implem.Pleasanter.Models
                         column: column);
                 case "ErrStackTrace":
                     return ErrStackTrace.ToApiValue(
-                        context: context,
-                        ss: ss,
-                        column: column);
-                case "Title":
-                    return Title.ToApiValue(
                         context: context,
                         ss: ss,
                         column: column);
@@ -2175,6 +2544,7 @@ namespace Implem.Pleasanter.Models
                     case "SysLogs_Application": Application = value.ToString(); break;
                     case "SysLogs_Class": Class = value.ToString(); break;
                     case "SysLogs_Method": Method = value.ToString(); break;
+                    case "SysLogs_Api": Api = value.ToBool(); break;
                     case "SysLogs_RequestData": RequestData = value.ToString(); break;
                     case "SysLogs_HttpMethod": HttpMethod = value.ToString(); break;
                     case "SysLogs_RequestSize": RequestSize = value.ToInt(); break;
@@ -2284,6 +2654,7 @@ namespace Implem.Pleasanter.Models
             if (data.Application != null) Application = data.Application.ToString().ToString();
             if (data.Class != null) Class = data.Class.ToString().ToString();
             if (data.Method != null) Method = data.Method.ToString().ToString();
+            if (data.Api != null) Api = data.Api.ToBool().ToBool();
             if (data.RequestData != null) RequestData = data.RequestData.ToString().ToString();
             if (data.HttpMethod != null) HttpMethod = data.HttpMethod.ToString().ToString();
             if (data.RequestSize != null) RequestSize = data.RequestSize.ToInt().ToInt();
@@ -2500,6 +2871,30 @@ namespace Implem.Pleasanter.Models
                             Method = dataRow[column.ColumnName].ToString();
                             SavedMethod = Method;
                             break;
+                        case "Api":
+                            Api = dataRow[column.ColumnName].ToBool();
+                            SavedApi = Api;
+                            break;
+                        case "SiteId":
+                            SiteId = dataRow[column.ColumnName].ToLong();
+                            SavedSiteId = SiteId;
+                            break;
+                        case "ReferenceId":
+                            ReferenceId = dataRow[column.ColumnName].ToLong();
+                            SavedReferenceId = ReferenceId;
+                            break;
+                        case "ReferenceType":
+                            ReferenceType = dataRow[column.ColumnName].ToString();
+                            SavedReferenceType = ReferenceType;
+                            break;
+                        case "Status":
+                            Status = dataRow[column.ColumnName].ToLong();
+                            SavedStatus = Status;
+                            break;
+                        case "Description":
+                            Description = dataRow[column.ColumnName].ToString();
+                            SavedDescription = Description;
+                            break;
                         case "RequestData":
                             RequestData = dataRow[column.ColumnName].ToString();
                             SavedRequestData = RequestData;
@@ -2694,6 +3089,12 @@ namespace Implem.Pleasanter.Models
                 || Application_Updated(context: context)
                 || Class_Updated(context: context)
                 || Method_Updated(context: context)
+                || Api_Updated(context: context)
+                || SiteId_Updated(context: context)
+                || ReferenceId_Updated(context: context)
+                || ReferenceType_Updated(context: context)
+                || Status_Updated(context: context)
+                || Description_Updated(context: context)
                 || RequestData_Updated(context: context)
                 || HttpMethod_Updated(context: context)
                 || RequestSize_Updated(context: context)
@@ -2800,6 +3201,8 @@ namespace Implem.Pleasanter.Models
             Context context,
             string method,
             string message,
+            int sysLogsStatus = 200,
+            string sysLogsDescription = null,
             string errStackTrace = null,
             SysLogTypes sysLogType = SysLogTypes.Info)
         {
@@ -2822,6 +3225,11 @@ namespace Implem.Pleasanter.Models
                         }
                     };
                     break;
+            }
+            if (Parameters.Rds.SysLogsSchemaVersion >= 2)
+            {
+                Status = sysLogsStatus;
+                Description = sysLogsDescription;
             }
             ErrStackTrace = errStackTrace;
             WriteSysLog(
@@ -2912,6 +3320,23 @@ namespace Implem.Pleasanter.Models
                 UserAgent = context.UserAgent;
                 SessionGuid = context.SessionGuid;
             }
+            if (Parameters.Rds.SysLogsSchemaVersion >= 2)
+            {
+                ReferenceId = context.Id;
+                switch (context.Controller)
+                {
+                    case "items":
+                        var itemModel = new ItemModel(
+                            context: context,
+                            referenceId: context.Id);
+                        if (itemModel.AccessStatus == Databases.AccessStatuses.Selected)
+                        {
+                            SiteId = itemModel.SiteId;
+                            ReferenceType = itemModel.ReferenceType;
+                        }
+                        break;
+                }
+            }
             InDebug = Debugs.InDebug();
             AssemblyVersion = Environments.AssemblyVersion;
         }
@@ -2942,8 +3367,10 @@ namespace Implem.Pleasanter.Models
             var data = requestData;
             var apiKey = data?.RegexFirst("\"ApiKey\":[ ]*\"[a-zA-Z0-9]+?\"");
             var base64 = data?.RegexFirst("\"Base64\":[ ]*\".+?\"");
+            var password = data?.RegexFirst("\"Password\":[ ]*\".+?\"");
             if (!apiKey.IsNullOrEmpty()) data = data.Replace(apiKey, "\"ApiKey\": \"*\"");
             if (!base64.IsNullOrEmpty()) data = data.Replace(base64, "\"base64\": \"*\"");
+            if (!password.IsNullOrEmpty()) data = data.Replace(password, "\"Password\": \"*\"");
             return data;
         }
 
@@ -2967,6 +3394,12 @@ namespace Implem.Pleasanter.Models
         /// </summary>
         public void Finish(Context context, int responseSize = 0)
         {
+            if (Parameters.Rds.SysLogsSchemaVersion >= 2)
+            {
+                Api = context.Api;
+                Status = context.SysLogsStatus;
+                Description = context.SysLogsDescription;
+            }
             if (responseSize > 0) { ResponseSize = responseSize; }
             Elapsed = (DateTime.Now - StartTime).TotalMilliseconds;
             var currentProcess = Debugs.CurrentProcess();

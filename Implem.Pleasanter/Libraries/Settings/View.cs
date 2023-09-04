@@ -11,7 +11,6 @@ using Implem.Pleasanter.Libraries.ServerScripts;
 using System;
 using System.Collections.Generic;
 using System.Data;
-using System.Diagnostics;
 using System.Linq;
 using System.Runtime.Serialization;
 namespace Implem.Pleasanter.Libraries.Settings
@@ -598,7 +597,8 @@ namespace Implem.Pleasanter.Libraries.Settings
                             case "ViewSorters":
                                 SetSorters(
                                     context: context,
-                                    ss: ss);
+                                    ss: ss,
+                                    prefix: prefix);
                                 break;
                             case "ViewFilters_UpdateCommand":
                                 UpdateCommand = (CommandDisplayTypes)Int(
@@ -1071,10 +1071,10 @@ namespace Implem.Pleasanter.Libraries.Settings
             }
         }
 
-        private void SetSorters(Context context, SiteSettings ss)
+        private void SetSorters(Context context, SiteSettings ss, string prefix = "")
         {
             ColumnSorterHash = new Dictionary<string, SqlOrderBy.Types>();
-            context.Forms.List("ViewSorters").ForEach(data =>
+            context.Forms.List($"{prefix}ViewSorters").ForEach(data =>
             {
                 var columnName = data.Split_1st('&');
                 var type = OrderByType(data.Split_2nd('&'));
@@ -1904,6 +1904,7 @@ namespace Implem.Pleasanter.Libraries.Settings
                     Eq = data.Key.StartsWith("eq_"),
                     NotEq = data.Key.StartsWith("notEq_"),
                     Groups = data.Key == "Groups",
+                    GroupMembers = data.Key == "GroupMembers",
                     OnSelectingWhere = data.Key == "OnSelectingWhere",
                 })
                 .Where(o => o.Column != null
@@ -1912,6 +1913,7 @@ namespace Implem.Pleasanter.Libraries.Settings
                     || o.Eq
                     || o.NotEq
                     || o.Groups
+                    || o.GroupMembers
                     || o.OnSelectingWhere)
                 .ForEach(data =>
                 {
@@ -2034,6 +2036,39 @@ namespace Implem.Pleasanter.Libraries.Settings
                                         unionType: Sqls.UnionTypes.UnionAll)
                                 }));
                                 break;
+                        }
+                    }
+                    else if (data.GroupMembers)
+                    {
+                        var ids = data.Value.Deserialize<List<int>>();
+                        if (ids?.Any(id => id > 0) == true)
+                        {
+                            where.Add(sub: Rds.Exists(statements: new SqlStatement[]
+                            {
+                                Rds.SelectGroupMembers(
+                                    column: Rds.GroupMembersColumn().GroupId(),
+                                    where: Rds.GroupMembersWhere()
+                                        .UserId_In(ids)
+                                        .GroupMembers_GroupId(raw: "\"Groups\".\"GroupId\"")
+                                        .Groups_Disabled(false)),
+                                Rds.SelectGroupMembers(
+                                    column: Rds.GroupMembersColumn().GroupId(),
+                                    join: Rds.GroupMembersJoinDefault()
+                                        .Add(new SqlJoin(
+                                            tableBracket: "\"Depts\"",
+                                            joinType: SqlJoin.JoinTypes.Inner,
+                                            joinExpression: "\"GroupMembers\".\"DeptId\"=\"Depts\".\"DeptId\""))
+                                        .Add(new SqlJoin(
+                                            tableBracket: "\"Users\"",
+                                            joinType: SqlJoin.JoinTypes.Inner,
+                                            joinExpression: "\"Depts\".\"DeptId\"=\"Users\".\"DeptId\"")),
+                                    where: Rds.UsersWhere()
+                                        .UserId_In(ids)
+                                        .GroupMembers_GroupId(raw: "\"Groups\".\"GroupId\"")
+                                        .Groups_Disabled(false)
+                                        .Depts_Disabled(false),
+                                    unionType: Sqls.UnionTypes.UnionAll)
+                            }));
                         }
                     }
                     else if (data.OnSelectingWhere)
